@@ -1,0 +1,27 @@
+{
+    "cSpell.enabled": true,
+    "cSpell.languageSettings": [
+        {
+            // use with Markdown files
+            "languageId": "markdown",
+            // Exclude code.
+            "ignoreRegExpList": [
+                "/^\\s*```(.|\\n)+?^\\s*```/gm"
+            ]
+        }
+    ],
+    "cSpell.customDictionaries": {
+        "bbhash": {
+          "name": "bbhash",
+          "path": "${workspaceRoot}/.vscode/bbhash.txt",
+          "description": "Words used in this project",
+          "addWords": true
+        },
+        "custom": true, // Enable the `custom` dictionary
+        "internal-terms": false // Disable the `internal-terms` dictionary
+    },
+    "go.lintTool": "golangci-lint",
+    "go.lintFlags": [
+        "--fast",
+    ]
+}
