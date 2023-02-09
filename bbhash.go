@@ -21,6 +21,7 @@ type BBHash struct {
 	ranks    []uint64
 	saltHash uint64 // precomputed hash of the salt
 	gamma    float64
+	revIndex []uint64 // reverse index: only used for reverse mapping
 
 	// intermediate results for the current level
 	current    *bitVector // bit vector for current level  : A in the paper
