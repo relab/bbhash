@@ -16,50 +16,34 @@ func TestNewWithReverseMap(t *testing.T) {
 		{gamma: 2.0, size: 1000},
 		{gamma: 2.0, size: 10000},
 		{gamma: 2.0, size: 100000},
-		// {gamma: 2.0, size: 1000000},
-		// Find() is too slow to check 10 million keys
+		// Construction and Find() is too slow to check 1 million keys (takes 30-40s).
 	}
 
 	salt := rand.New(rand.NewSource(99)).Uint64()
 	for _, tt := range tests {
 		keys := generateKeys(tt.size, 99)
 		t.Run(fmt.Sprintf("gamma=%.1f/keys=%d", tt.gamma, tt.size), func(t *testing.T) {
-			bb, reverseIndex, err := bbhash.NewWithReverseIndexNaive(tt.gamma, salt, keys)
-			if err != nil {
-				t.Fatal(err)
-			}
-			t.Log(bb)
-			for keyIndex, key := range keys {
-				hashIndex := bb.Find(key)
-				checkKey(t, keyIndex, key, uint64(len(keys)), hashIndex)
-				if reverseIndex[hashIndex] != key {
-					t.Fatalf("index[%#x] = %#x, expected %#x", hashIndex, reverseIndex[hashIndex], key)
-				}
-			}
-		})
-		t.Run(fmt.Sprintf("gamma=%.1f/keys=%d", tt.gamma, tt.size), func(t *testing.T) {
-			bb, err := bbhash.NewWithReverseIndex(tt.gamma, salt, keys)
-			if err != nil {
-				t.Fatal(err)
-			}
-			t.Log(bb)
-			errCnt, matchCnt := 0, 0
-			for keyIndex, key := range keys {
-				hashIndex := bb.Find(key)
-				checkKey(t, keyIndex, key, uint64(len(keys)), hashIndex)
-				lookupKey, err := bb.Lookup(hashIndex)
+			for _, f := range []func() (*bbhash.BBHash, error){
+				func() (*bbhash.BBHash, error) { return bbhash.NewWithReverseIndexNaive(tt.gamma, salt, keys) },
+				func() (*bbhash.BBHash, error) { return bbhash.NewWithReverseIndex(tt.gamma, salt, keys) },
+				func() (*bbhash.BBHash, error) { return bbhash.NewWithReverseIndex2(tt.gamma, salt, keys) },
+			} {
+				bb, err := f()
 				if err != nil {
 					t.Fatal(err)
 				}
-				if lookupKey != key {
-					errCnt++
-					t.Errorf("Lookup(%d) = %#x, expected %#x", hashIndex, lookupKey, key)
-				} else {
-					matchCnt++
+				t.Log(bb)
+				for keyIndex, key := range keys {
+					hashIndex := bb.Find(key)
+					checkKey(t, keyIndex, key, uint64(len(keys)), hashIndex)
+					lookupKey, err := bb.Lookup(hashIndex)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if lookupKey != key {
+						t.Errorf("Lookup(%d) = %#x, expected %#x", hashIndex, lookupKey, key)
+					}
 				}
-			}
-			if errCnt > 0 {
-				t.Fail()
 			}
 		})
 	}
@@ -83,13 +67,19 @@ func BenchmarkNewWithReverseMap(b *testing.B) {
 		b.Run(fmt.Sprintf("Naive/gamma=%.1f/keys=%d", tt.gamma, tt.size), func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				bbSink, revIndexSink, _ = bbhash.NewWithReverseIndexNaive(tt.gamma, salt, keys)
+				bbSink, _ = bbhash.NewWithReverseIndexNaive(tt.gamma, salt, keys)
 			}
 		})
 		b.Run(fmt.Sprintf(" Fast/gamma=%.1f/keys=%d", tt.gamma, tt.size), func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				bbSink, _ = bbhash.NewWithReverseIndex(tt.gamma, salt, keys)
+			}
+		})
+		b.Run(fmt.Sprintf("Fast2/gamma=%.1f/keys=%d", tt.gamma, tt.size), func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				bbSink, _ = bbhash.NewWithReverseIndex2(tt.gamma, salt, keys)
 			}
 		})
 	}
