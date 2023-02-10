@@ -66,8 +66,6 @@ func (bb *BBHash) computeWithReverseIndex(keys []uint64) error {
 	var lvlRank uint64 = 1
 	bb.ranks = make([]uint64, initialLevels)
 
-	allKeys := keys
-
 	// loop exits when keys == nil, i.e., when there are no more keys to re-hash
 	for lvl := uint(0); keys != nil; lvl++ {
 		sz := bb.current.Size()
@@ -97,21 +95,17 @@ func (bb *BBHash) computeWithReverseIndex(keys []uint64) error {
 			bb.current.Set(i)
 		}
 
-		// for _, k := range keys {
-		// 	i := keyHash(lvlHash, k) % sz
-		// 	if bb.current.IsSet(i) {
-		// 		// we found the correct index position for this key
-		// 		index := lvlRank + bb.current.Rank(i)
-		// 		fmt.Printf("Comp(key=%#016x, pos=%2d) = (Level %d, L rank: %2d, P rank: %2d, Index: %2d)\n", k, i, lvl, lvlRank, bb.current.Rank(i), index)
-		// 		if bb.revIndex[index] != 0 {
-		// 			// index already used; key belongs to a higher level
-		// 			fmt.Printf(" Dup(key=%#016x, pos=%2d) = (Level %d, L rank: %2d, P rank: %2d, Index: %2d)\n", k, i, lvl, lvlRank, bb.current.Rank(i), index)
-		// 			continue
-		// 		}
-		// 		bb.revIndex[index] = k
-		// 	}
-		// }
+		// fill the reverse index for the current level
+		for _, k := range keys {
+			i := keyHash(lvlHash, k) % sz
+			if bb.current.IsSet(i) {
+				// we found the hash index position for this key
+				index := lvlRank + bb.current.Rank(i)
+				bb.revIndex[index] = k
+			}
+		}
 
+		// update the rank for the current level
 		bb.ranks[lvl] = lvlRank
 		lvlRank += bb.current.OnesCount()
 
@@ -122,19 +116,5 @@ func (bb *BBHash) computeWithReverseIndex(keys []uint64) error {
 			return fmt.Errorf("can't find minimal perfect hash after %d tries", lvl)
 		}
 	}
-	// bb.computeLevelRanks()
-
-	for _, k := range allKeys {
-		for lvl, bv := range bb.bits {
-			i := hash(bb.saltHash, uint64(lvl), k) % bv.Size()
-			if bv.IsSet(i) {
-				index := bb.ranks[lvl] + bv.Rank(i)
-				bb.revIndex[index] = k
-				fmt.Printf("Sind(key=%#016x) = (Index: %2d)\n", k, index)
-				break
-			}
-		}
-	}
-
 	return nil
 }

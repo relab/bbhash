@@ -13,9 +13,9 @@ func TestNewWithReverseMap(t *testing.T) {
 		gamma float64
 		size  int
 	}{
-		{gamma: 2.0, size: 30},
-		// {gamma: 2.0, size: 10000},
-		// {gamma: 2.0, size: 100000},
+		{gamma: 2.0, size: 1000},
+		{gamma: 2.0, size: 10000},
+		{gamma: 2.0, size: 100000},
 		// {gamma: 2.0, size: 1000000},
 		// Find() is too slow to check 10 million keys
 	}
@@ -58,7 +58,6 @@ func TestNewWithReverseMap(t *testing.T) {
 					matchCnt++
 				}
 			}
-			t.Logf("Lookup() matched %d keys, %d keys did not match", matchCnt, errCnt)
 			if errCnt > 0 {
 				t.Fail()
 			}
