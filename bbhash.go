@@ -132,8 +132,15 @@ func (bb *BBHash) nextLevel() []uint64 {
 	if len(remainingKeys) == 0 {
 		return nil
 	}
-	// Reset redo set for reusing the slice
-	bb.redo = bb.redo[:0]
+	// Reset redo set for the next level
+	if bb.revIndex != nil {
+		// If we are creating a reverse index, we need to allocate a new redo slice
+		// since the previous redo slice will be used as the keys for the next level.
+		bb.redo = make([]uint64, 0, len(remainingKeys))
+	} else {
+		// Otherwise, we can reuse the redo slice.
+		bb.redo = bb.redo[:0:len(remainingKeys)]
+	}
 	// Number of words for the next level's bit vector
 	words := words(uint64(len(remainingKeys)), bb.gamma)
 	// Create a new bit vector for the next level
