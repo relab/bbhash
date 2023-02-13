@@ -26,7 +26,6 @@ func TestNewWithReverseMap(t *testing.T) {
 			for _, f := range []func() (*bbhash.BBHash, error){
 				func() (*bbhash.BBHash, error) { return bbhash.NewWithReverseIndexNaive(tt.gamma, salt, keys) },
 				func() (*bbhash.BBHash, error) { return bbhash.NewWithReverseIndex(tt.gamma, salt, keys) },
-				func() (*bbhash.BBHash, error) { return bbhash.NewWithReverseIndex2(tt.gamma, salt, keys) },
 			} {
 				bb, err := f()
 				if err != nil {
@@ -74,12 +73,6 @@ func BenchmarkNewWithReverseMap(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				bbSink, _ = bbhash.NewWithReverseIndex(tt.gamma, salt, keys)
-			}
-		})
-		b.Run(fmt.Sprintf("Fast2/gamma=%.1f/keys=%d", tt.gamma, tt.size), func(b *testing.B) {
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				bbSink, _ = bbhash.NewWithReverseIndex2(tt.gamma, salt, keys)
 			}
 		})
 	}
