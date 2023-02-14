@@ -18,13 +18,11 @@ func TestNewWithReverseMap(t *testing.T) {
 		{gamma: 2.0, size: 100000},
 		// Construction and Find() is too slow to check 1 million keys (takes 30-40s).
 	}
-
 	salt := rand.New(rand.NewSource(99)).Uint64()
 	for _, tt := range tests {
 		keys := generateKeys(tt.size, 99)
 		t.Run(fmt.Sprintf("gamma=%.1f/keys=%d", tt.gamma, tt.size), func(t *testing.T) {
 			for _, f := range []func() (*bbhash.BBHash, error){
-				func() (*bbhash.BBHash, error) { return bbhash.NewWithReverseIndexNaive(tt.gamma, salt, keys) },
 				func() (*bbhash.BBHash, error) { return bbhash.NewWithReverseIndex(tt.gamma, salt, keys) },
 			} {
 				bb, err := f()
@@ -63,13 +61,7 @@ func BenchmarkNewWithReverseMap(b *testing.B) {
 	salt := rand.New(rand.NewSource(99)).Uint64()
 	for _, tt := range tests {
 		keys := generateKeys(tt.size, 99)
-		b.Run(fmt.Sprintf("Naive/gamma=%.1f/keys=%d", tt.gamma, tt.size), func(b *testing.B) {
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				bbSink, _ = bbhash.NewWithReverseIndexNaive(tt.gamma, salt, keys)
-			}
-		})
-		b.Run(fmt.Sprintf(" Fast/gamma=%.1f/keys=%d", tt.gamma, tt.size), func(b *testing.B) {
+		b.Run(fmt.Sprintf("gamma=%.1f/keys=%d", tt.gamma, tt.size), func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				bbSink, _ = bbhash.NewWithReverseIndex(tt.gamma, salt, keys)

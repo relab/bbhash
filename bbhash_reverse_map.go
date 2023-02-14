@@ -5,32 +5,9 @@ import (
 	"fmt"
 )
 
+// NewWithReverseIndex creates a new BBHash with a reverse index.
+// See NewSerial for details on the parameters.
 func NewWithReverseIndex(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
-	if gamma <= 1.0 {
-		gamma = 2.0
-	}
-	sz := uint64(len(keys))
-	words := words(sz, gamma)
-	bb := &BBHash{
-		bits:       make([]*bitVector, 0, initialLevels),
-		saltHash:   saltHash(salt),
-		gamma:      gamma,
-		revIndex:   make([]uint64, sz+1), // +1 since 0 is reserved for not-found
-		current:    newBitVector(words),
-		collisions: newBitVector(words),
-		redo:       make([]uint64, 0, sz/2), // heuristic: only 1/2 of the keys will collide
-	}
-	if err := bb.computeWithReverseIndex(keys); err != nil {
-		return nil, err
-	}
-	// clear intermediate results
-	bb.current = nil
-	bb.collisions = nil
-	bb.redo = nil
-	return bb, nil
-}
-
-func NewWithReverseIndexNaive(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
 	bb, err := NewSerial(gamma, salt, keys)
 	if err != nil {
 		return nil, err
@@ -58,66 +35,4 @@ func (bb *BBHash) Lookup(hashIndex uint64) (uint64, error) {
 		return 0, fmt.Errorf("hash index %d out of range", hashIndex)
 	}
 	return bb.revIndex[hashIndex], nil
-}
-
-// computeWithReverseIndex computes the minimal perfect hash for the given keys and creates the reverse index.
-func (bb *BBHash) computeWithReverseIndex(keys []uint64) error {
-	// Initializing the lvlRank to 1, since the 0 index is reserved for not-found.
-	var lvlRank uint64 = 1
-	bb.ranks = make([]uint64, initialLevels)
-	allKeys := keys
-
-	// loop exits when keys == nil, i.e., when there are no more keys to re-hash
-	for lvl := uint(0); keys != nil; lvl++ {
-		sz := bb.current.Size()
-		// precompute the level hash to speed up the key hashing
-		lvlHash := levelHash(bb.saltHash, uint64(lvl))
-
-		// find colliding keys
-		for _, k := range keys {
-			i := keyHash(lvlHash, k) % sz
-			if bb.current.IsSet(i) {
-				// found one or more collisions at index i
-				bb.collisions.Set(i)
-				continue
-			}
-			bb.current.Set(i)
-		}
-
-		// assign non-colliding keys to the current level's bit vector
-		for _, k := range keys {
-			i := keyHash(lvlHash, k) % sz
-			if bb.collisions.IsSet(i) {
-				bb.redo = append(bb.redo, k)
-				// unset the bit since there was a collision
-				bb.current.Unset(i)
-				continue
-			}
-			bb.current.Set(i)
-		}
-
-		// update the rank for the current level
-		bb.ranks[lvl] = lvlRank
-		lvlRank += bb.current.OnesCount()
-
-		// move to next level and compute the set of keys to re-hash (that had collisions)
-		keys = bb.nextLevel()
-
-		if lvl > maxLevel {
-			return fmt.Errorf("can't find minimal perfect hash after %d tries", lvl)
-		}
-	}
-
-	// fill the reverse index for each level
-	for _, k := range allKeys {
-		for lvl, bv := range bb.bits {
-			i := hash(bb.saltHash, uint64(lvl), k) % bv.Size()
-			if bv.IsSet(i) {
-				index := bb.ranks[lvl] + bv.Rank(i)
-				bb.revIndex[index] = k
-				break
-			}
-		}
-	}
-	return nil
 }
