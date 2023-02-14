@@ -21,6 +21,7 @@ type BBHash struct {
 	ranks    []uint64
 	saltHash uint64 // precomputed hash of the salt
 	gamma    float64
+	revIndex []uint64 // reverse index: only used for reverse mapping
 
 	// intermediate results for the current level
 	current    *bitVector // bit vector for current level  : A in the paper
@@ -131,8 +132,12 @@ func (bb *BBHash) nextLevel() []uint64 {
 	if len(remainingKeys) == 0 {
 		return nil
 	}
-	// Reset redo set for reusing the slice
-	bb.redo = bb.redo[:0]
+	// Reset redo set for the next level, reusing the slice for the next level's keys.
+	// It is possible to reuse this slice since we are adding new keys to the redo slice
+	// after the corresponding keys have been processed from the current level's "keys" slice.
+	// That is, the redo slice is always a subset of the keys slice, and the redo keys' indices
+	// are trailing the indices of the keys slice.
+	bb.redo = bb.redo[:0:len(remainingKeys)]
 	// Number of words for the next level's bit vector
 	words := words(uint64(len(remainingKeys)), bb.gamma)
 	// Create a new bit vector for the next level

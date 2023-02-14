@@ -16,4 +16,3 @@
 
 # Stuff to ignore for now
 bbhash_snarl_test.go
-bbhash_reverse_map.go

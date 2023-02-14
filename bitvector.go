@@ -3,6 +3,7 @@ package bbhash
 import (
 	"bytes"
 	"math/bits"
+	"strconv"
 )
 
 // bitVector represents a bit vector in an efficient manner.
@@ -89,5 +90,22 @@ func (b *bitVector) String() string {
 			buf.WriteByte('0')
 		}
 	}
+	return buf.String()
+}
+
+// stringList returns a string list of true positions in the bit vector.
+// Mainly useful for debugging with smaller bit vectors.
+func (b *bitVector) stringList() string {
+	var buf bytes.Buffer
+	buf.WriteString("(")
+	for i := uint64(0); i < b.Size(); i++ {
+		if b.IsSet(i) {
+			buf.WriteString(strconv.Itoa(int(i)))
+			if i < b.Size()-1 {
+				buf.WriteString(", ")
+			}
+		}
+	}
+	buf.WriteString(")")
 	return buf.String()
 }
