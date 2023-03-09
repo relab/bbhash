@@ -16,3 +16,4 @@
 
 # Stuff to ignore for now
 bbhash_snarl_test.go
+marshal_hack.go
