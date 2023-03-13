@@ -1,4 +1,5 @@
 bbhash
+benchstat
 Boba
 Chewbacca
 Chikhi
