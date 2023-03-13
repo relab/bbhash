@@ -9,7 +9,7 @@ import (
 // The Lookup method can be used to look up the original key for a given hash index.
 // See NewSerial for details on the parameters.
 func NewWithReverseIndex(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
-	bb, err := NewSerial(gamma, salt, keys)
+	bb, err := NewSequential(gamma, salt, keys)
 	if err != nil {
 		return nil, err
 	}
