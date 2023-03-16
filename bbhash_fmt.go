@@ -2,6 +2,7 @@ package bbhash
 
 import (
 	"fmt"
+	"go/format"
 	"strings"
 )
 
@@ -78,4 +79,34 @@ func (bb BBHash) space() string {
 // levels returns the number of levels in the minimal perfect hash.
 func (bb BBHash) levels() int {
 	return len(bb.bits)
+}
+
+// BitVectors returns a Go slice for BBHash's per-level bit vectors.
+// This is intended for testing and debugging; no guarantees are made about the format.
+func (bb BBHash) BitVectors() string {
+	var b strings.Builder
+	b.WriteString("var bitVectors = [][]uint64{\n")
+	for lvl, bv := range bb.bits {
+		b.WriteString(fmt.Sprintf("// Level %d:\n{\n", lvl))
+		for _, v := range bv.v {
+			b.WriteString(fmt.Sprintf("%#016x,\n", v))
+		}
+		b.WriteString("},\n")
+	}
+	b.WriteString("}\n")
+	s, err := format.Source([]byte(b.String()))
+	if err != nil {
+		panic(err)
+	}
+	return string(s)
+}
+
+// LevelVectors returns a slice representation of the BBHash's per-level bit vectors.
+func (bb BBHash) LevelVectors() [][]uint64 {
+	m := make([][]uint64, 0, len(bb.bits))
+	for _, bv := range bb.bits {
+		m = append(m, make([]uint64, len(bv.v)))
+		copy(m[len(m)-1], bv.v)
+	}
+	return m
 }
