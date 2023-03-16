@@ -15,6 +15,7 @@
 *.prof
 
 # Stuff to ignore for now
-bbhash_snarl_test.go
+bbhash_snarl_test.*
 marshal_hack.go
 benchmark-results
+.vscode/launch.json
