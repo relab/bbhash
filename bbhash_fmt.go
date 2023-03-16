@@ -1,13 +1,13 @@
 package bbhash
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 )
 
 // String returns a string representation of BBHash with overall and per-level statistics.
 func (bb BBHash) String() string {
-	var b bytes.Buffer
+	var b strings.Builder
 	b.WriteString(fmt.Sprintf("BBHash(gamma=%3.1f, entries=%d, levels=%d, bits=%d, size=%s, bits per key=%3.1f)\n",
 		bb.gamma, bb.entries(), bb.levels(), bb.numBits(), bb.space(), bb.bitsPerKey()))
 	for i, bv := range bb.bits {
