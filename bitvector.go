@@ -1,9 +1,9 @@
 package bbhash
 
 import (
-	"bytes"
 	"math/bits"
 	"strconv"
+	"strings"
 )
 
 // bitVector represents a bit vector in an efficient manner.
@@ -82,7 +82,7 @@ func (b *bitVector) Rank(i uint64) uint64 {
 
 // String returns a string representation of the bit vector.
 func (b *bitVector) String() string {
-	var buf bytes.Buffer
+	var buf strings.Builder
 	for i := uint64(0); i < b.Size(); i++ {
 		if b.IsSet(i) {
 			buf.WriteByte('1')
@@ -96,7 +96,7 @@ func (b *bitVector) String() string {
 // stringList returns a string list of true positions in the bit vector.
 // Mainly useful for debugging with smaller bit vectors.
 func (b *bitVector) stringList() string {
-	var buf bytes.Buffer
+	var buf strings.Builder
 	buf.WriteString("(")
 	for i := uint64(0); i < b.Size(); i++ {
 		if b.IsSet(i) {

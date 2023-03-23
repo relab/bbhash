@@ -80,26 +80,21 @@ func (bb *BBHash) compute(keys []uint64) error {
 		// find colliding keys and possible bit vector positions for non-colliding keys
 		for _, k := range keys {
 			i := keyHash(lvlHash, k) % sz
-			if ld.current.IsSet(i) {
-				// found one or more collisions at index i
-				ld.collisions.Set(i)
-				continue
-			}
-			ld.current.Set(i)
+			// update the bit and collision vectors for the current level
+			ld.current.Update(i)
 		}
 
 		// remove bit vector position assignments for colliding keys and add them to the redo set
 		for _, k := range keys {
 			i := keyHash(lvlHash, k) % sz
-			if ld.collisions.IsSet(i) {
+			// unset the bit vector position for the current key if it collided
+			if ld.current.UnsetCollision(i) {
 				ld.redo = append(ld.redo, k)
-				// unset the bit since there was a collision
-				ld.current.Unset(i)
 			}
 		}
 
 		// save the current bit vector for the current level
-		bb.bits = append(bb.bits, ld.current)
+		bb.bits = append(bb.bits, ld.current.bitVector())
 		// move to next level and compute the set of keys to re-hash (that had collisions)
 		keys = ld.nextLevel()
 
@@ -113,19 +108,17 @@ func (bb *BBHash) compute(keys []uint64) error {
 
 // lvlData holds intermediate results for the current level
 type lvlData struct {
-	current    *bitVector // bit vector for current level  : A in the paper
-	collisions *bitVector // collisions at current level   : C in the paper
-	redo       []uint64   // keys to re-hash at next level : F in the paper
-	gamma      float64
+	current *bcVector // bit vectors for current level : A and C in the paper
+	redo    []uint64  // keys to re-hash at next level : F in the paper
+	gamma   float64
 }
 
 func newLevelData(sz uint64, gamma float64) *lvlData {
 	words := words(sz, gamma)
 	return &lvlData{
-		gamma:      gamma,
-		current:    newBitVector(words),
-		collisions: newBitVector(words),
-		redo:       make([]uint64, 0, sz/2), // heuristic: only 1/2 of the keys will collide
+		gamma:   gamma,
+		current: newBCVector(words),
+		redo:    make([]uint64, 0, sz/2), // heuristic: only 1/2 of the keys will collide
 	}
 }
 
@@ -144,8 +137,7 @@ func (ld *lvlData) nextLevel() []uint64 {
 	ld.redo = ld.redo[:0:numKeys]
 	// number of words for the next level's bit vector
 	words := words(numKeys, ld.gamma)
-	ld.current = newBitVector(words)
-	ld.collisions.Reset(words)
+	ld.current.nextLevel(words)
 	return remainingKeys
 }
 
