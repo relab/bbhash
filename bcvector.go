@@ -1,9 +1,12 @@
 package bbhash
 
+import "sync"
+
 // bcVector represents a combined bit and collision vector.
 type bcVector struct {
-	v []uint64
-	c []uint64
+	v  []uint64
+	c  []uint64
+	mu sync.Mutex
 }
 
 // newBCVector returns a combined bit and collision vector with the given number of words.
@@ -37,6 +40,11 @@ func (b *bcVector) Size() uint64 {
 	return uint64(len(b.v) * 64)
 }
 
+// Words returns the number of 64-bit words this bit vector has allocated.
+func (b *bcVector) Words() uint64 {
+	return uint64(len(b.v))
+}
+
 // Update sets the bit at position i, and records a collision if the bit was already set.
 func (b *bcVector) Update(i uint64) {
 	x, y := i/64, uint64(1<<(i%64))
@@ -60,6 +68,37 @@ func (b *bcVector) UnsetCollision(i uint64) bool {
 	}
 	// no collisions at index i
 	return false
+}
+
+// Merge merges the local bcVector into the this bcVector.
+func (b *bcVector) Merge(local *bcVector) {
+	// Below v (b.v) refers to the existing global bit vector, and lv (local.v) refers
+	// to the bit vector to be merged into the global bit vector.
+	//
+	//   v   lv   AND   OR   New v   Collision   Note
+	//   0    0    0     0     0         0       Not set, no collision
+	//   0    1    0     1     1         0       Not set, update v, no collision
+	//   1    0    0     1     1         0       Already set, no collision
+	//   1    1    1     1     1         1       Leave it set, collision
+	//
+	// If v&lv is 0, then there is no collision between the two vectors. However, the lc
+	// vector may still have collisions, so we merge lc into the global collision vector
+	// if lc is not 0.
+	//
+	// Note: only b.v and b.c needs to be locked.
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	for i := range b.v {
+		v := b.v[i]
+		lv := local.v[i]
+		lc := local.c[i]
+		c := v&lv | lc
+		if c != 0 {
+			b.c[i] |= c
+		}
+		b.v[i] |= lv
+	}
 }
 
 // String returns a string representation of the bit vector.

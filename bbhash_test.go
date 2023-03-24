@@ -54,8 +54,8 @@ func TestSimple(t *testing.T) {
 		fn     func(gamma float64, salt uint64, keys []uint64) (*bbhash.BBHash, error)
 		keyMap map[uint64]uint64
 	}{
-		{name: "Serial", fn: bbhash.NewSequential},
-		{name: "Parallel", fn: bbhash.NewParallel},
+		{name: "Sequential", fn: bbhash.NewSequential},
+		{name: "Parallel__", fn: bbhash.NewParallel},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -69,7 +69,7 @@ func TestSimple(t *testing.T) {
 				checkKey(t, keyIndex, key, uint64(len(keys)), hashIndex)
 
 				if x, ok := keyMap[hashIndex]; ok {
-					t.Fatalf("index %d already mapped to key %#x", hashIndex, x)
+					t.Errorf("index %d already mapped to key %#x", hashIndex, x)
 				}
 				keyMap[hashIndex] = key
 			}
@@ -199,8 +199,8 @@ func BenchmarkNewBBHash(b *testing.B) {
 		10_000,
 		100_000,
 		1_000_000,
-		// 10_000_000,
-		// 100_000_000,
+		10_000_000,
+		100_000_000,
 		// 1_000_000_000,
 	}
 	tests := []struct {
@@ -208,7 +208,7 @@ func BenchmarkNewBBHash(b *testing.B) {
 		fn   func(gamma float64, salt uint64, keys []uint64) (*bbhash.BBHash, error)
 	}{
 		{name: "Sequential", fn: bbhash.NewSequential},
-		// {name: "Parallel__", fn: bbhash.NewParallel},
+		{name: "Parallel", fn: bbhash.NewParallel},
 	}
 	salt := rand.New(rand.NewSource(99)).Uint64()
 	for _, tt := range tests {

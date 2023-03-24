@@ -30,6 +30,7 @@ func TestReproducibleBitVectors(t *testing.T) {
 		fn    func(gamma float64, salt uint64, keys []uint64) (*bbhash.BBHash, error)
 	}{
 		{name: "Sequential", gamma: 2.0, seed: 123, fn: bbhash.NewSequential},
+		{name: "Parallel__", gamma: 2.0, seed: 123, fn: bbhash.NewParallel},
 	}
 
 	salt := rand.New(rand.NewSource(99)).Uint64()
