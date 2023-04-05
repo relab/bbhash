@@ -32,6 +32,10 @@ func (bb *BBHash) computeParallel(keys []uint64) error {
 	sz := uint64(len(keys))
 	ld := newLevelData(sz, bb.gamma)
 	ncpu := runtime.NumCPU()
+	perCPUVectors := make([]*bcVector, ncpu)
+	for i := 0; i < ncpu; i++ {
+		perCPUVectors[i] = newBCVector(ld.current.Words())
+	}
 
 	// loop exits when keys == nil, i.e., when there are no more keys to re-hash
 	for lvl := uint(0); keys != nil; lvl++ {
@@ -48,6 +52,7 @@ func (bb *BBHash) computeParallel(keys []uint64) error {
 		var wg sync.WaitGroup
 		wg.Add(ncpu)
 		for j := 0; j < ncpu; j++ {
+			current := perCPUVectors[j]
 			x := z * j
 			y := x + z
 			if j == ncpu-1 {
@@ -59,7 +64,6 @@ func (bb *BBHash) computeParallel(keys []uint64) error {
 				continue
 			}
 			go func() {
-				current := newBCVector(wds)
 				// find colliding keys
 				for _, k := range keys[x:y] {
 					i := keyHash(lvlHash, k) % sz
@@ -68,6 +72,7 @@ func (bb *BBHash) computeParallel(keys []uint64) error {
 				}
 				// merge the current bit and collision vectors into the global bit and collision vectors
 				ld.current.Merge(current)
+				current.reset(wds)
 				wg.Done()
 			}()
 		}

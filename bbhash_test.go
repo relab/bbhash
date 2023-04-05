@@ -186,9 +186,9 @@ func TestSlow(t *testing.T) {
 var bbSink *bbhash.BBHash
 
 // BenchmarkNewBBHash benchmarks the creation of a new BBHash with sequential and parallel.
-// Run with:
+// Run with (it takes almost 30 minutes):
 //
-// go test -run x -bench BenchmarkNewBBHash -count 10 > new.txt
+// go test -run x -bench BenchmarkNewBBHash -benchmem -cpuprofile cpu.prof -timeout=30m -count 10 > new.txt
 //
 // Then compare with:
 //
@@ -201,7 +201,7 @@ func BenchmarkNewBBHash(b *testing.B) {
 		1_000_000,
 		10_000_000,
 		100_000_000,
-		// 1_000_000_000,
+		1_000_000_000,
 	}
 	tests := []struct {
 		name string

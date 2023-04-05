@@ -1,6 +1,8 @@
 package bbhash
 
-import "sync"
+import (
+	"sync"
+)
 
 // bcVector represents a combined bit and collision vector.
 type bcVector struct {
@@ -25,6 +27,15 @@ func (b *bcVector) nextLevel(words uint64) {
 		b.c[i] = 0
 	}
 	b.v = make([]uint64, words)
+}
+
+func (b *bcVector) reset(words uint64) {
+	b.c = b.c[:words]
+	b.v = b.v[:words]
+	for i := range b.c {
+		b.c[i] = 0
+		b.v[i] = 0
+	}
 }
 
 func (b *bcVector) bitVector() *bitVector {
@@ -81,8 +92,8 @@ func (b *bcVector) Merge(local *bcVector) {
 	//   1    0    0     1     1         0       Already set, no collision
 	//   1    1    1     1     1         1       Leave it set, collision
 	//
-	// If v&lv is 0, then there is no collision between the two vectors. However, the lc
-	// vector may still have collisions, so we merge lc into the global collision vector
+	// If v&lv is 0, then there is no collision for the corresponding bit-pairs in the two bit vectors.
+	// However, the lc vector may still have collisions, so we merge lc into the global collision vector
 	// if lc is not 0.
 	//
 	// Note: only b.v and b.c needs to be locked.
