@@ -201,7 +201,7 @@ func BenchmarkNewBBHash(b *testing.B) {
 		1_000_000,
 		10_000_000,
 		100_000_000,
-		1_000_000_000,
+		// 1_000_000_000,
 	}
 	tests := []struct {
 		name string

@@ -29,11 +29,17 @@ func (b *bcVector) nextLevel(words uint64) {
 	b.v = make([]uint64, words)
 }
 
+// reset resizes the bit and collision vector to the given number of words,
+// and zeroes the elements.
 func (b *bcVector) reset(words uint64) {
 	b.c = b.c[:words]
 	b.v = b.v[:words]
+	// Note: It is faster to zero the vector in two separate loops than in one loop,
+	// because the compiler is able to optimize the two loops into two separate memclr calls.
 	for i := range b.c {
 		b.c[i] = 0
+	}
+	for i := range b.c {
 		b.v[i] = 0
 	}
 }
