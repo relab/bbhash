@@ -39,7 +39,6 @@ func (bb *BBHash) computeParallel(keys []uint64) error {
 
 	// loop exits when keys == nil, i.e., when there are no more keys to re-hash
 	for lvl := uint(0); keys != nil; lvl++ {
-		sz = ld.current.Size()
 		wds := ld.current.Words()
 
 		// precompute the level hash to speed up the key hashing
@@ -64,15 +63,15 @@ func (bb *BBHash) computeParallel(keys []uint64) error {
 				continue
 			}
 			go func() {
+				current.reset(wds)
 				// find colliding keys
 				for _, k := range keys[x:y] {
-					i := keyHash(lvlHash, k) % sz
+					h := keyHash(lvlHash, k)
 					// update the bit and collision vectors for the current level
-					current.Update(i)
+					current.Update(h)
 				}
 				// merge the current bit and collision vectors into the global bit and collision vectors
 				ld.current.Merge(current)
-				current.reset(wds)
 				wg.Done()
 			}()
 		}
@@ -80,9 +79,9 @@ func (bb *BBHash) computeParallel(keys []uint64) error {
 
 		// remove bit vector position assignments for colliding keys and add them to the redo set
 		for _, k := range keys {
-			i := keyHash(lvlHash, k) % sz
+			h := keyHash(lvlHash, k)
 			// unset the bit vector position for the current key if it collided
-			if ld.current.UnsetCollision(i) {
+			if ld.current.UnsetCollision(h) {
 				ld.redo = append(ld.redo, k)
 			}
 		}

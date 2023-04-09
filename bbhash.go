@@ -73,22 +73,21 @@ func (bb *BBHash) compute(keys []uint64) error {
 
 	// loop exits when keys == nil, i.e., when there are no more keys to re-hash
 	for lvl := uint(0); keys != nil; lvl++ {
-		sz = ld.current.Size()
 		// precompute the level hash to speed up the key hashing
 		lvlHash := levelHash(bb.saltHash, uint64(lvl))
 
 		// find colliding keys and possible bit vector positions for non-colliding keys
 		for _, k := range keys {
-			i := keyHash(lvlHash, k) % sz
+			h := keyHash(lvlHash, k)
 			// update the bit and collision vectors for the current level
-			ld.current.Update(i)
+			ld.current.Update(h)
 		}
 
 		// remove bit vector position assignments for colliding keys and add them to the redo set
 		for _, k := range keys {
-			i := keyHash(lvlHash, k) % sz
+			h := keyHash(lvlHash, k)
 			// unset the bit vector position for the current key if it collided
-			if ld.current.UnsetCollision(i) {
+			if ld.current.UnsetCollision(h) {
 				ld.redo = append(ld.redo, k)
 			}
 		}

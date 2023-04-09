@@ -56,9 +56,11 @@ func (b *bcVector) Words() uint64 {
 	return uint64(len(b.v))
 }
 
-// Update sets the bit at position i, and records a collision if the bit was already set.
-func (b *bcVector) Update(i uint64) {
-	x, y := i/64, uint64(1<<(i%64))
+// Update sets the bit for the given hash h, and records a collision if the bit was already set.
+// The bit position is determined by h modulo the size of the vector.
+func (b *bcVector) Update(h uint64) {
+	x := (h % b.Size()) / 64
+	y := uint64(1 << (h & 63))
 	if b.v[x]&y != 0 {
 		// found one or more collisions at index i; update collision vector
 		b.c[x] |= y
@@ -68,10 +70,12 @@ func (b *bcVector) Update(i uint64) {
 	b.v[x] |= y
 }
 
-// UnsetCollision returns true if the bit at position i has a collision.
-// The vector is also unset at position i.
-func (b *bcVector) UnsetCollision(i uint64) bool {
-	x, y := i/64, uint64(1<<(i%64))
+// UnsetCollision returns true if hash h's bit has a collision.
+// The vector is also unset for hash h's bit position.
+// The bit position is determined by h modulo the size of the vector.
+func (b *bcVector) UnsetCollision(h uint64) bool {
+	x := (h % b.Size()) / 64
+	y := uint64(1 << (h & 63))
 	if b.c[x]&y != 0 {
 		// found collision at index i; unset bit
 		b.v[x] &^= y
