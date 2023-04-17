@@ -54,6 +54,14 @@ func (bb BBHash) entries() (sz uint64) {
 	return sz
 }
 
+func (bb BBHash) perLevelEntries() []uint64 {
+	entries := make([]uint64, len(bb.bits))
+	for lvl, bv := range bb.bits {
+		entries[lvl] += bv.OnesCount()
+	}
+	return entries
+}
+
 // numBits returns the number of bits used to represent the minimal perfect hash.
 func (bb BBHash) numBits() (sz uint64) {
 	for _, bv := range bb.bits {

@@ -12,7 +12,7 @@ const (
 	// Maximum number of attempts (level) at making a perfect hash function.
 	// Per the paper, each successive level exponentially reduces the
 	// probability of collision.
-	maxLevel uint = 200
+	maxLevel = 200
 )
 
 // BBHash represents a minimal perfect hash for a set of keys.
