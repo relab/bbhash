@@ -4,6 +4,7 @@ benchstat
 Boba
 Chewbacca
 Chikhi
+cpuprofile
 Fett
 Greedo
 Gryski
@@ -14,6 +15,8 @@ Jabba
 Kenobi
 Leia
 Limasset
+memclr
+ncpu
 Peterlongo
 Rayan
 relab

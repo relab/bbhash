@@ -3,7 +3,6 @@ package bbhash
 
 import (
 	"fmt"
-	"runtime"
 )
 
 // NewSequential2 creates a new BBHash for the given keys. The keys must be unique.
@@ -31,57 +30,46 @@ func NewSequential2(gamma float64, salt uint64, keys []uint64) (*BBHash, error) 
 func (bb *BBHash) compute2(keys []uint64) error {
 	sz := uint64(len(keys))
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
-	ncpu := runtime.NumCPU()
-	wds := words(sz, bb.gamma)
-	fmt.Printf("ncpu=%d, len(keys)=%d, words=%d\n", ncpu, len(keys), wds)
+	levelVector := newBCVector(words(sz, bb.gamma))
 
 	// loop exits when keys == nil, i.e., when there are no more keys to re-hash
 	for lvl := 0; keys != nil; lvl++ {
-		wds = words(uint64(len(keys)), bb.gamma)
-		levelVector := newBCVector(wds)
-		parts := split(keys, ncpu)
+		parts := splitX(keys)
 
 		// precompute the level hash to speed up the key hashing
 		lvlHash := levelHash(bb.saltHash, uint64(lvl))
 
-		for j := 0; j < ncpu; j++ {
-			current := newBCVector(wds)
-
+		for j := 0; j < len(parts); j++ {
 			// find colliding keys and possible bit vector positions for non-colliding keys
 			for _, k := range parts[j] {
 				h := keyHash(lvlHash, k)
-				// fmt.Printf("lvl=%2d, keyHash=%#016x\n", lvl, h)
 				// update the bit and collision vectors for the current level
-				current.Update(h)
+				levelVector.Update(h)
 			}
-			// fmt.Printf(" current.Size()=%d, OnesCount()=%d\n", current.Size(), current.bitVector().OnesCount())
-			levelVector.Merge(current)
-			// fmt.Printf("localVec.Size()=%d, OnesCount()=%d\n", levelVector.Size(), levelVector.bitVector().OnesCount())
 		}
 
-		for j := 0; j < ncpu; j++ {
+		for j := 0; j < len(parts); j++ {
 			// remove bit vector position assignments for colliding keys and add them to the redo set
 			for _, k := range parts[j] {
 				h := keyHash(lvlHash, k)
 				// unset the bit vector position for the current key if it collided
 				if levelVector.UnsetCollision(h) {
-					// fmt.Printf("bang: lvl=%2d, keyHash=%#016x, k=%#016x\n", lvl, h, k)
 					redo = append(redo, k)
 				}
 			}
 		}
-		// save the current bit vector for the current cpu+level
-		b := levelVector.bitVector()
-		bb.bits = append(bb.bits, b)
-		fmt.Printf("done: rank[%d]=%d, len(redo)=%d\n", len(bb.bits)-1, b.OnesCount(), len(redo))
-		// fmt.Printf("vector: %s\n", b.String())
 
-		if len(redo) == 0 {
+		// save the current bit vector for the current cpu+level
+		bb.bits = append(bb.bits, levelVector.bitVector())
+
+		sz = uint64(len(redo))
+		if sz == 0 {
 			break
 		}
 		// move to next level and compute the set of keys to re-hash (that had collisions)
 		keys = redo
 		redo = redo[:0]
+		levelVector.nextLevel(words(sz, bb.gamma))
 
 		if lvl > maxLevel {
 			return fmt.Errorf("can't find minimal perfect hash after %d tries", lvl)
