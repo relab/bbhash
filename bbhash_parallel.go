@@ -19,18 +19,17 @@ func NewParallel(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
 	bb := &BBHash{
 		bits:     make([]*bitVector, 0, initialLevels),
 		saltHash: saltHash(salt),
-		gamma:    gamma,
 	}
-	if err := bb.computeParallel(keys); err != nil {
+	if err := bb.computeParallel(keys, gamma); err != nil {
 		return nil, err
 	}
 	return bb, nil
 }
 
 // computeParallel computes the minimal perfect hash for the given keys in parallel by sharding the keys.
-func (bb *BBHash) computeParallel(keys []uint64) error {
+func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 	sz := uint64(len(keys))
-	ld := newLevelData(sz, bb.gamma)
+	ld := newLevelData(sz, gamma)
 	ncpu := runtime.NumCPU()
 	perCPUVectors := make([]*bcVector, ncpu)
 	for i := 0; i < ncpu; i++ {

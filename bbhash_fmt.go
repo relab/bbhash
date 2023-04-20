@@ -10,7 +10,7 @@ import (
 func (bb BBHash) String() string {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("BBHash(gamma=%3.1f, entries=%d, levels=%d, bits=%d, size=%s, bits per key=%3.1f)\n",
-		bb.gamma, bb.entries(), bb.levels(), bb.numBits(), bb.space(), bb.bitsPerKey()))
+		bb.gamma(), bb.entries(), bb.levels(), bb.numBits(), bb.space(), bb.bitsPerKey()))
 	for i, bv := range bb.bits {
 		sz := readableSize(bv.Words() * 8)
 		entries := bv.OnesCount()
@@ -44,6 +44,13 @@ func readableSize(sizeInBytes uint64) string {
 		return fmt.Sprintf("%3.1f KB", sz/_kB)
 	}
 	return fmt.Sprintf("%d B", sizeInBytes)
+}
+
+// gamma returns an estimate of the gamma parameter used to construct the minimal perfect hash.
+// It is an estimate because the size of the level 0 bit vector is not necessarily a multiple of 64.
+func (bb BBHash) gamma() float64 {
+	lvl0Size := bb.bits[0].Size()
+	return float64(lvl0Size) / float64(bb.entries())
 }
 
 // entries returns the number of entries in the minimal perfect hash.

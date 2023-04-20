@@ -19,8 +19,7 @@ const (
 type BBHash struct {
 	bits     []*bitVector
 	ranks    []uint64
-	saltHash uint64 // precomputed hash of the salt
-	gamma    float64
+	saltHash uint64   // precomputed hash of the salt
 	revIndex []uint64 // reverse index: only used for reverse mapping
 }
 
@@ -37,9 +36,8 @@ func NewSequential(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
 	bb := &BBHash{
 		bits:     make([]*bitVector, 0, initialLevels),
 		saltHash: saltHash(salt),
-		gamma:    gamma,
 	}
-	if err := bb.compute(keys); err != nil {
+	if err := bb.compute(keys, gamma); err != nil {
 		return nil, err
 	}
 	return bb, nil
@@ -67,9 +65,9 @@ func (bb *BBHash) Find(key uint64) uint64 {
 }
 
 // compute computes the minimal perfect hash for the given keys.
-func (bb *BBHash) compute(keys []uint64) error {
+func (bb *BBHash) compute(keys []uint64, gamma float64) error {
 	sz := uint64(len(keys))
-	ld := newLevelData(sz, bb.gamma)
+	ld := newLevelData(sz, gamma)
 
 	// loop exits when keys == nil, i.e., when there are no more keys to re-hash
 	for lvl := uint(0); keys != nil; lvl++ {
