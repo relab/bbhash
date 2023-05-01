@@ -54,9 +54,10 @@ func TestSimple(t *testing.T) {
 		fn     func(gamma float64, salt uint64, keys []uint64) (*bbhash.BBHash, error)
 		keyMap map[uint64]uint64
 	}{
-		{name: "Sequential", fn: bbhash.NewSequential},
+		{name: "Sequential_", fn: bbhash.NewSequential},
 		{name: "Sequential2", fn: bbhash.NewSequential2},
-		{name: "Parallel__", fn: bbhash.NewParallel},
+		{name: "Parallel___", fn: bbhash.NewParallel},
+		{name: "Parallel2__", fn: bbhash.NewParallel2},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -93,18 +94,23 @@ func TestManyKeys(t *testing.T) {
 		{name: "Sequential_", gamma: 1.0, seed: 123, fn: bbhash.NewSequential},
 		{name: "Sequential2", gamma: 1.0, seed: 123, fn: bbhash.NewSequential2},
 		{name: "Parallel___", gamma: 1.0, seed: 123, fn: bbhash.NewParallel},
+		{name: "Parallel2__", gamma: 1.0, seed: 123, fn: bbhash.NewParallel2},
 		{name: "Sequential_", gamma: 2.0, seed: 123, fn: bbhash.NewSequential},
 		{name: "Sequential2", gamma: 2.0, seed: 123, fn: bbhash.NewSequential2},
 		{name: "Parallel___", gamma: 2.0, seed: 123, fn: bbhash.NewParallel},
+		{name: "Parallel2__", gamma: 2.0, seed: 123, fn: bbhash.NewParallel2},
 		{name: "Sequential_", gamma: 2.5, seed: 123, fn: bbhash.NewSequential},
 		{name: "Sequential2", gamma: 2.5, seed: 123, fn: bbhash.NewSequential2},
 		{name: "Parallel___", gamma: 2.5, seed: 123, fn: bbhash.NewParallel},
+		{name: "Parallel2__", gamma: 2.5, seed: 123, fn: bbhash.NewParallel2},
 		{name: "Sequential_", gamma: 3.0, seed: 123, fn: bbhash.NewSequential},
 		{name: "Sequential2", gamma: 3.0, seed: 123, fn: bbhash.NewSequential2},
 		{name: "Parallel___", gamma: 3.0, seed: 123, fn: bbhash.NewParallel},
+		{name: "Parallel2__", gamma: 3.0, seed: 123, fn: bbhash.NewParallel2},
 		{name: "Sequential_", gamma: 5.0, seed: 123, fn: bbhash.NewSequential},
 		{name: "Sequential2", gamma: 5.0, seed: 123, fn: bbhash.NewSequential2},
 		{name: "Parallel___", gamma: 5.0, seed: 123, fn: bbhash.NewParallel},
+		{name: "Parallel2__", gamma: 5.0, seed: 123, fn: bbhash.NewParallel2},
 	}
 
 	salt := rand.New(rand.NewSource(99)).Uint64()
@@ -211,9 +217,10 @@ func BenchmarkNewBBHash(b *testing.B) {
 		name string
 		fn   func(gamma float64, salt uint64, keys []uint64) (*bbhash.BBHash, error)
 	}{
-		{name: "Sequential", fn: bbhash.NewSequential},
-		{name: "Parallel", fn: bbhash.NewParallel},
-		{name: "Sequential2", fn: bbhash.NewSequential2},
+		// {name: "Sequential_", fn: bbhash.NewSequential},
+		{name: "Parallel___", fn: bbhash.NewParallel},
+		// {name: "Sequential2", fn: bbhash.NewSequential2},
+		{name: "Parallel2__", fn: bbhash.NewParallel2},
 	}
 	salt := rand.New(rand.NewSource(99)).Uint64()
 	for _, tt := range tests {
