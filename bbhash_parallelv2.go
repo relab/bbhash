@@ -27,46 +27,61 @@ func NewParallel2(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
 	return bb, nil
 }
 
+type partialKeys struct {
+	keys    []uint64
+	current *bcVector
+}
+
+func newPartial(keys []uint64, words uint64, n int) []*partialKeys {
+	parts := split(keys, n)
+	pk := make([]*partialKeys, n)
+	for i := 0; i < n; i++ {
+		pk[i] = &partialKeys{
+			keys:    parts[i],
+			current: newBCVector(words),
+		}
+	}
+	return pk
+}
+
+func (pk *partialKeys) findCollisions(words, lvlHash uint64, lvlVector *bcVector, wg *sync.WaitGroup) {
+	pk.current.reset(words)
+	// find colliding keys and possible bit vector positions for non-colliding keys
+	for _, k := range pk.keys {
+		h := keyHash(lvlHash, k)
+		// update the bit and collision vectors for the current level
+		pk.current.Update(h)
+	}
+	// merge the current bit and collision vectors into the global bit and collision vectors
+	lvlVector.Merge(pk.current)
+	wg.Done()
+}
+
 // computeParallel2 computes the minimal perfect hash for the given keys.
 func (bb *BBHash) computeParallel2(keys []uint64, gamma float64) error {
 	sz := uint64(len(keys))
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
 	lvlVector := newBCVector(words(sz, gamma))
-	wds := lvlVector.Words()
+	// wds := lvlVector.Words()
 	ncpu := runtime.NumCPU()
-	perCPUVectors := make([]*bcVector, ncpu)
-	for i := 0; i < ncpu; i++ {
-		perCPUVectors[i] = newBCVector(wds)
-	}
 
 	// loop exits when keys == nil, i.e., when there are no more keys to re-hash
 	for lvl := 0; keys != nil; lvl++ {
-		wds := lvlVector.Words()
-		parts := split(keys, ncpu)
-
 		// precompute the level hash to speed up the key hashing
 		lvlHash := levelHash(bb.saltHash, uint64(lvl))
 
+		wds := lvlVector.Words()
+		pks := newPartial(keys, wds, ncpu)
+
 		var wg sync.WaitGroup
-		wg.Add(len(parts))
-		for j := 0; j < len(parts); j++ {
-			if len(parts[j]) == 0 {
+		wg.Add(len(pks))
+		for j := 0; j < len(pks); j++ {
+			if len(pks[j].keys) == 0 {
 				wg.Done()
 				continue
 			}
-			current := perCPUVectors[j]
-			go func(j int) {
-				current.reset(wds)
-				// find colliding keys and possible bit vector positions for non-colliding keys
-				for _, k := range parts[j] {
-					h := keyHash(lvlHash, k)
-					// update the bit and collision vectors for the current level
-					current.Update(h)
-				}
-				// merge the current bit and collision vectors into the global bit and collision vectors
-				lvlVector.Merge(current)
-				wg.Done()
-			}(j)
+			current := pks[j]
+			go current.findCollisions(wds, lvlHash, lvlVector, &wg)
 		}
 		wg.Wait()
 
