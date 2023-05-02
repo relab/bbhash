@@ -28,29 +28,28 @@ func NewParallel(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
 
 // computeParallel computes the minimal perfect hash for the given keys in parallel by sharding the keys.
 func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
-	sz := uint64(len(keys))
-	ld := newLevelData(sz, gamma)
+	sz := len(keys)
+	wds := words(uint64(sz), gamma)
+	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
+	// bit vectors for current level : A and C in the paper
+	lvlVector := newBCVector(wds)
 	ncpu := runtime.NumCPU()
 	perCPUVectors := make([]*bcVector, ncpu)
 	for i := 0; i < ncpu; i++ {
-		perCPUVectors[i] = newBCVector(ld.current.Words())
+		perCPUVectors[i] = newBCVector(wds)
 	}
 
 	// loop exits when keys == nil, i.e., when there are no more keys to re-hash
 	for lvl := uint(0); keys != nil; lvl++ {
-		wds := ld.current.Words()
-
 		// precompute the level hash to speed up the key hashing
 		lvlHash := levelHash(bb.saltHash, uint64(lvl))
 
-		n := len(keys)
-		z := n / ncpu
-		r := n % ncpu
+		z := sz / ncpu
+		r := sz % ncpu
 
 		var wg sync.WaitGroup
 		wg.Add(ncpu)
 		for j := 0; j < ncpu; j++ {
-			current := perCPUVectors[j]
 			x := z * j
 			y := x + z
 			if j == ncpu-1 {
@@ -61,6 +60,7 @@ func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 				// no need to spawn a goroutine since there are no keys to process
 				continue
 			}
+			current := perCPUVectors[j]
 			go func() {
 				current.reset(wds)
 				// find colliding keys
@@ -70,7 +70,7 @@ func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 					current.Update(h)
 				}
 				// merge the current bit and collision vectors into the global bit and collision vectors
-				ld.current.Merge(current)
+				lvlVector.Merge(current)
 				wg.Done()
 			}()
 		}
@@ -80,15 +80,22 @@ func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 		for _, k := range keys {
 			h := keyHash(lvlHash, k)
 			// unset the bit vector position for the current key if it collided
-			if ld.current.UnsetCollision(h) {
-				ld.redo = append(ld.redo, k)
+			if lvlVector.UnsetCollision(h) {
+				redo = append(redo, k)
 			}
 		}
 
 		// save the current bit vector for the current level
-		bb.bits = append(bb.bits, ld.current.bitVector())
+		bb.bits = append(bb.bits, lvlVector.bitVector())
+		sz = len(redo)
+		if sz == 0 {
+			break
+		}
 		// move to next level and compute the set of keys to re-hash (that had collisions)
-		keys = ld.nextLevel()
+		keys = redo
+		redo = redo[:0]
+		wds = words(uint64(sz), gamma)
+		lvlVector.nextLevel(wds)
 
 		if lvl > maxLevel {
 			return fmt.Errorf("can't find minimal perfect hash after %d tries", lvl)
