@@ -57,7 +57,6 @@ func TestSimple(t *testing.T) {
 		{name: "Sequential_", fn: bbhash.NewSequential},
 		{name: "Sequential2", fn: bbhash.NewSequential2},
 		{name: "Parallel___", fn: bbhash.NewParallel},
-		{name: "Parallel2__", fn: bbhash.NewParallel2},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -94,23 +93,18 @@ func TestManyKeys(t *testing.T) {
 		{name: "Sequential_", gamma: 1.0, seed: 123, fn: bbhash.NewSequential},
 		{name: "Sequential2", gamma: 1.0, seed: 123, fn: bbhash.NewSequential2},
 		{name: "Parallel___", gamma: 1.0, seed: 123, fn: bbhash.NewParallel},
-		{name: "Parallel2__", gamma: 1.0, seed: 123, fn: bbhash.NewParallel2},
 		{name: "Sequential_", gamma: 2.0, seed: 123, fn: bbhash.NewSequential},
 		{name: "Sequential2", gamma: 2.0, seed: 123, fn: bbhash.NewSequential2},
 		{name: "Parallel___", gamma: 2.0, seed: 123, fn: bbhash.NewParallel},
-		{name: "Parallel2__", gamma: 2.0, seed: 123, fn: bbhash.NewParallel2},
 		{name: "Sequential_", gamma: 2.5, seed: 123, fn: bbhash.NewSequential},
 		{name: "Sequential2", gamma: 2.5, seed: 123, fn: bbhash.NewSequential2},
 		{name: "Parallel___", gamma: 2.5, seed: 123, fn: bbhash.NewParallel},
-		{name: "Parallel2__", gamma: 2.5, seed: 123, fn: bbhash.NewParallel2},
 		{name: "Sequential_", gamma: 3.0, seed: 123, fn: bbhash.NewSequential},
 		{name: "Sequential2", gamma: 3.0, seed: 123, fn: bbhash.NewSequential2},
 		{name: "Parallel___", gamma: 3.0, seed: 123, fn: bbhash.NewParallel},
-		{name: "Parallel2__", gamma: 3.0, seed: 123, fn: bbhash.NewParallel2},
 		{name: "Sequential_", gamma: 5.0, seed: 123, fn: bbhash.NewSequential},
 		{name: "Sequential2", gamma: 5.0, seed: 123, fn: bbhash.NewSequential2},
 		{name: "Parallel___", gamma: 5.0, seed: 123, fn: bbhash.NewParallel},
-		{name: "Parallel2__", gamma: 5.0, seed: 123, fn: bbhash.NewParallel2},
 	}
 
 	salt := rand.New(rand.NewSource(99)).Uint64()
@@ -196,9 +190,9 @@ func TestSlow(t *testing.T) {
 var bbSink *bbhash.BBHash
 
 // BenchmarkNewBBHash benchmarks the creation of a new BBHash with sequential and parallel.
-// Run with (it takes almost 30 minutes):
+// Run with a large timeout (on my M2 Max it took 38 minutes):
 //
-// go test -run x -bench BenchmarkNewBBHash -benchmem -cpuprofile cpu.prof -timeout=30m -count 10 > new.txt
+// go test -run x -bench BenchmarkNewBBHash -benchmem -timeout=60m -count 20 > new.txt
 //
 // Then compare with:
 //
@@ -211,16 +205,15 @@ func BenchmarkNewBBHash(b *testing.B) {
 		1_000_000,
 		10_000_000,
 		100_000_000,
-		// 1_000_000_000,
+		1_000_000_000,
 	}
 	tests := []struct {
 		name string
 		fn   func(gamma float64, salt uint64, keys []uint64) (*bbhash.BBHash, error)
 	}{
-		// {name: "Sequential_", fn: bbhash.NewSequential},
-		{name: "Parallel___", fn: bbhash.NewParallel},
+		{name: "Sequential_", fn: bbhash.NewSequential},
 		// {name: "Sequential2", fn: bbhash.NewSequential2},
-		{name: "Parallel2__", fn: bbhash.NewParallel2},
+		{name: "Parallel___", fn: bbhash.NewParallel},
 	}
 	salt := rand.New(rand.NewSource(99)).Uint64()
 	for _, tt := range tests {
