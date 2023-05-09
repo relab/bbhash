@@ -76,12 +76,14 @@ func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 						// update the bit and collision vectors for the current level
 						current.Update(h)
 					}
-					// merge the current bit and collision vectors into the global bit and collision vectors
-					lvlVector.Merge(current)
 					wg.Done()
 				}()
 			}
 			wg.Wait()
+			// merge the per CPU bit and collision vectors into the global bit and collision vectors
+			for _, v := range perCPUVectors {
+				lvlVector.Merge(v)
+			}
 		}
 
 		// remove bit vector position assignments for colliding keys and add them to the redo set

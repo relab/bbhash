@@ -1,14 +1,9 @@
 package bbhash
 
-import (
-	"sync"
-)
-
 // bcVector represents a combined bit and collision vector.
 type bcVector struct {
-	v  []uint64
-	c  []uint64
-	mu sync.Mutex
+	v []uint64
+	c []uint64
 }
 
 // newBCVector returns a combined bit and collision vector with the given number of words.
@@ -105,10 +100,6 @@ func (b *bcVector) Merge(local *bcVector) {
 	// If v&lv is 0, then there is no collision for the corresponding bit-pairs in the two bit vectors.
 	// However, the lc vector may still have collisions, so we merge lc into the global collision vector
 	// if lc is not 0.
-	//
-	// Note: only b.v and b.c needs to be locked.
-	b.mu.Lock()
-	defer b.mu.Unlock()
 
 	for i := range b.v {
 		v := b.v[i]

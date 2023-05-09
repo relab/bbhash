@@ -211,7 +211,7 @@ func BenchmarkNewBBHash(b *testing.B) {
 		name string
 		fn   func(gamma float64, salt uint64, keys []uint64) (*bbhash.BBHash, error)
 	}{
-		{name: "Sequential_", fn: bbhash.NewSequential},
+		// {name: "Sequential_", fn: bbhash.NewSequential},
 		// {name: "Sequential2", fn: bbhash.NewSequential2},
 		{name: "Parallel___", fn: bbhash.NewParallel},
 	}
