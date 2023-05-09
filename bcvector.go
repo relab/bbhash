@@ -115,9 +115,7 @@ func (b *bcVector) Merge(local *bcVector) {
 		lv := local.v[i]
 		lc := local.c[i]
 		c := v&lv | lc
-		if c != 0 {
-			b.c[i] |= c
-		}
+		b.c[i] |= c // merge collision vector (faster to always merge than to check if c != 0)
 		b.v[i] |= lv
 	}
 }

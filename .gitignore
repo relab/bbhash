@@ -15,12 +15,9 @@
 *.prof
 
 # Stuff to ignore for now
-bbhash_snarl_test.*
 marshal_hack.go
 benchmark-results
 .vscode/launch.json
 debug_test.go
 debug.go
-bbhash_not_working.go
-bbhash_parallel_not_working.go
 scratchpad/
