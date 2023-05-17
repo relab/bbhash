@@ -78,6 +78,53 @@ func TestSimple(t *testing.T) {
 	}
 }
 
+// Run with:
+//
+//	go test -run TestFalsePositiveRate
+//
+// Avoid the -v argument to make it more readable.
+func TestFalsePositiveRate(t *testing.T) {
+	sizes := []int{
+		1000,
+		10_000,
+		100_000,
+	}
+	tests := []struct {
+		name  string
+		gamma float64
+		fn    func(gamma float64, salt uint64, keys []uint64) (*bbhash.BBHash, error)
+	}{
+		{name: "Sequential", gamma: 1.1, fn: bbhash.NewSequential},
+		{name: "Sequential", gamma: 1.5, fn: bbhash.NewSequential},
+		{name: "Sequential", gamma: 1.7, fn: bbhash.NewSequential},
+		{name: "Sequential", gamma: 2.0, fn: bbhash.NewSequential},
+		{name: "Sequential", gamma: 2.5, fn: bbhash.NewSequential},
+		{name: "Sequential", gamma: 3.0, fn: bbhash.NewSequential},
+	}
+	salt := rand.New(rand.NewSource(99)).Uint64()
+	for _, tt := range tests {
+		for _, size := range sizes {
+			keys := generateKeys(size, 123)
+			t.Run(fmt.Sprintf("name=%s/gamma=%0.1f/keys=%d", tt.name, tt.gamma, size), func(t *testing.T) {
+				bb, err := tt.fn(tt.gamma, salt, keys)
+				if err != nil {
+					t.Fatal(err)
+				}
+				keyMap := make(map[uint64]uint64)
+				for keyIndex, key := range keys {
+					hashIndex := bb.Find(key)
+					checkKey(t, keyIndex, key, uint64(len(keys)), hashIndex)
+					if x, ok := keyMap[hashIndex]; ok {
+						t.Errorf("index %d already mapped to key %#x", hashIndex, x)
+					}
+					keyMap[hashIndex] = key
+				}
+				fmt.Println(bb)
+			})
+		}
+	}
+}
+
 func TestManyKeys(t *testing.T) {
 	sizes := []int{
 		1000,
