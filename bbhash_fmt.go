@@ -9,8 +9,8 @@ import (
 // String returns a string representation of BBHash with overall and per-level statistics.
 func (bb BBHash) String() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("BBHash(gamma=%3.1f, entries=%d, levels=%d, bits=%d, size=%s, bits per key=%3.1f)\n",
-		bb.gamma, bb.entries(), bb.levels(), bb.numBits(), bb.space(), bb.bitsPerKey()))
+	b.WriteString(fmt.Sprintf("BBHash(gamma=%3.1f, entries=%d, levels=%d, bits=%d, size=%s, bits per key=%3.1f, false positive rate=%.2f)\n",
+		bb.gamma(), bb.entries(), bb.levels(), bb.numBits(), bb.space(), bb.bitsPerKey(), bb.falsePositiveRate()))
 	for i, bv := range bb.bits {
 		sz := readableSize(bv.Words() * 8)
 		entries := bv.OnesCount()
@@ -46,12 +46,27 @@ func readableSize(sizeInBytes uint64) string {
 	return fmt.Sprintf("%d B", sizeInBytes)
 }
 
+// gamma returns an estimate of the gamma parameter used to construct the minimal perfect hash.
+// It is an estimate because the size of the level 0 bit vector is not necessarily a multiple of 64.
+func (bb BBHash) gamma() float64 {
+	lvl0Size := bb.bits[0].Size()
+	return float64(lvl0Size) / float64(bb.entries())
+}
+
 // entries returns the number of entries in the minimal perfect hash.
 func (bb BBHash) entries() (sz uint64) {
 	for _, bv := range bb.bits {
 		sz += bv.OnesCount()
 	}
 	return sz
+}
+
+func (bb BBHash) perLevelEntries() []uint64 {
+	entries := make([]uint64, len(bb.bits))
+	for lvl, bv := range bb.bits {
+		entries[lvl] += bv.OnesCount()
+	}
+	return entries
 }
 
 // numBits returns the number of bits used to represent the minimal perfect hash.
@@ -79,6 +94,21 @@ func (bb BBHash) space() string {
 // levels returns the number of levels in the minimal perfect hash.
 func (bb BBHash) levels() int {
 	return len(bb.bits)
+}
+
+// falsePositiveRate returns the false positive rate of the minimal perfect hash.
+// Note: This may not be accurate if the actual keys overlap with the test keys [0,2N];
+// that is, if many of the actual keys are in the range [0,2N], then it will be inaccurate.
+func (bb BBHash) falsePositiveRate() float64 {
+	var cnt int
+	numTestKeys := bb.entries() * 2
+	for key := uint64(0); key < numTestKeys; key++ {
+		hashIndex := bb.Find(uint64(key))
+		if hashIndex != 0 {
+			cnt++
+		}
+	}
+	return float64(cnt) / float64(numTestKeys)
 }
 
 // BitVectors returns a Go slice for BBHash's per-level bit vectors.

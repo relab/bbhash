@@ -12,15 +12,14 @@ const (
 	// Maximum number of attempts (level) at making a perfect hash function.
 	// Per the paper, each successive level exponentially reduces the
 	// probability of collision.
-	maxLevel uint = 200
+	maxLevel = 200
 )
 
 // BBHash represents a minimal perfect hash for a set of keys.
 type BBHash struct {
 	bits     []*bitVector
 	ranks    []uint64
-	saltHash uint64 // precomputed hash of the salt
-	gamma    float64
+	saltHash uint64   // precomputed hash of the salt
 	revIndex []uint64 // reverse index: only used for reverse mapping
 }
 
@@ -37,9 +36,8 @@ func NewSequential(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
 	bb := &BBHash{
 		bits:     make([]*bitVector, 0, initialLevels),
 		saltHash: saltHash(salt),
-		gamma:    gamma,
 	}
-	if err := bb.compute(keys); err != nil {
+	if err := bb.compute(keys, gamma); err != nil {
 		return nil, err
 	}
 	return bb, nil
@@ -67,28 +65,27 @@ func (bb *BBHash) Find(key uint64) uint64 {
 }
 
 // compute computes the minimal perfect hash for the given keys.
-func (bb *BBHash) compute(keys []uint64) error {
+func (bb *BBHash) compute(keys []uint64, gamma float64) error {
 	sz := uint64(len(keys))
-	ld := newLevelData(sz, bb.gamma)
+	ld := newLevelData(sz, gamma)
 
 	// loop exits when keys == nil, i.e., when there are no more keys to re-hash
 	for lvl := uint(0); keys != nil; lvl++ {
-		sz = ld.current.Size()
 		// precompute the level hash to speed up the key hashing
 		lvlHash := levelHash(bb.saltHash, uint64(lvl))
 
 		// find colliding keys and possible bit vector positions for non-colliding keys
 		for _, k := range keys {
-			i := keyHash(lvlHash, k) % sz
+			h := keyHash(lvlHash, k)
 			// update the bit and collision vectors for the current level
-			ld.current.Update(i)
+			ld.current.Update(h)
 		}
 
 		// remove bit vector position assignments for colliding keys and add them to the redo set
 		for _, k := range keys {
-			i := keyHash(lvlHash, k) % sz
+			h := keyHash(lvlHash, k)
 			// unset the bit vector position for the current key if it collided
-			if ld.current.UnsetCollision(i) {
+			if ld.current.UnsetCollision(h) {
 				ld.redo = append(ld.redo, k)
 			}
 		}
