@@ -25,6 +25,13 @@ func NewSequential2(gamma float64, salt uint64, keys []uint64) (*BBHash, error) 
 	return bb, nil
 }
 
+func newBBHash(saltHash uint64) *BBHash {
+	return &BBHash{
+		bits:     make([]*bitVector, 0, initialLevels),
+		saltHash: saltHash,
+	}
+}
+
 // compute2 computes the minimal perfect hash for the given keys.
 func (bb *BBHash) compute2(keys []uint64, gamma float64) error {
 	sz := uint64(len(keys))

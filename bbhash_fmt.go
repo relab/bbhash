@@ -10,7 +10,7 @@ import (
 func (bb BBHash) String() string {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("BBHash(gamma=%3.1f, entries=%d, levels=%d, bits=%d, size=%s, bits per key=%3.1f, false positive rate=%.2f)\n",
-		bb.gamma(), bb.entries(), bb.levels(), bb.numBits(), bb.space(), bb.BitsPerKey(), bb.falsePositiveRate()))
+		bb.gamma(), bb.entries(), bb.Levels(), bb.numBits(), bb.space(), bb.BitsPerKey(), bb.falsePositiveRate()))
 	for i, bv := range bb.bits {
 		sz := readableSize(bv.Words() * 8)
 		entries := bv.OnesCount()
@@ -84,15 +84,11 @@ func (bb BBHash) BitsPerKey() float64 {
 
 // space returns the space required by the minimal perfect hash in human readable format.
 func (bb BBHash) space() string {
-	var sz uint64 = 0
-	for _, bv := range bb.bits {
-		sz += bv.Words() * 8
-	}
-	return readableSize(sz)
+	return readableSize(bb.numBits() / 8)
 }
 
-// levels returns the number of levels in the minimal perfect hash.
-func (bb BBHash) levels() int {
+// Levels returns the number of Levels in the minimal perfect hash.
+func (bb BBHash) Levels() int {
 	return len(bb.bits)
 }
 
