@@ -74,6 +74,7 @@ func (bb BBHash) numBits() (sz uint64) {
 	for _, bv := range bb.bits {
 		sz += bv.size()
 	}
+	sz += uint64(len(bb.ranks)) * 64
 	return sz
 }
 
