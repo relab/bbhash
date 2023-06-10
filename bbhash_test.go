@@ -210,30 +210,31 @@ func TestFalsePositiveRate(t *testing.T) {
 
 var bbSink mphf
 
-// BenchmarkNewBBHash benchmarks the creation of a new BBHash with sequential and parallel.
-// Run with a large timeout (on my M2 Max it took 38 minutes):
+// BenchmarkNewBBHash benchmarks the construction of a new BBHash using
+// sequential and parallel variants. This will take a long time to run,
+// especially if you enable large sizes. Thus, to avoid timeouts, you
+// should run this with a -timeout=0 argument.
 //
-// go test -run x -bench BenchmarkNewBBHash -benchmem -timeout=60m -count 20 > new.txt
+//	go test -run x -bench BenchmarkNewBBHash -benchmem -timeout=0 -count 10 > new.txt
 //
 // Then compare with:
 //
-// benchstat -col /name new.txt
+//	benchstat -col /name new.txt
 func BenchmarkNewBBHash(b *testing.B) {
 	sizes := []int{
 		1000,
 		10_000,
 		100_000,
 		1_000_000,
-		10_000_000,
-		100_000_000,
-		1_000_000_000,
+		// 10_000_000,
+		// 100_000_000,
+		// 1_000_000_000,
 	}
 	gammaValues := []float64{
 		1.1,
-		1.3,
-		1.5,
 		2.0,
 	}
+	partitionSizes := []int{2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 48, 64, 128}
 	tests := []variant[*bbhash.BBHash]{
 		{name: "Sequential", fn: bbhash.NewSequential},
 		{name: "Parallel", fn: bbhash.NewParallel},
@@ -258,13 +259,13 @@ func BenchmarkNewBBHash(b *testing.B) {
 		}
 		for _, tt := range tests2 {
 			for _, gamma := range gammaValues {
-				for partSize := 2; partSize <= 512; partSize += 2 {
-					bb, _ := tt.fn2(gamma, partSize, salt, keys)
+				for _, partitionSize := range partitionSizes {
+					bb, _ := tt.fn2(gamma, partitionSize, salt, keys)
 					max, min := bb.MaxMinLevels()
-					b.Run(fmt.Sprintf("name=%s/gamma=%.1f/bpk=%.2f/Levels=%d,%d/PartitionSize=%d/keys=%d", tt.name, gamma, bb.BitsPerKey(), max, min, partSize, size), func(b *testing.B) {
+					b.Run(fmt.Sprintf("name=%s/gamma=%.1f/bpk=%.2f/Levels=%d,%d/PartitionSize=%d/keys=%d", tt.name, gamma, bb.BitsPerKey(), max, min, partitionSize, size), func(b *testing.B) {
 						b.ResetTimer()
 						for i := 0; i < b.N; i++ {
-							bbSink, _ = tt.fn2(gamma, partSize, salt, keys)
+							bbSink, _ = tt.fn2(gamma, partitionSize, salt, keys)
 						}
 					})
 				}
@@ -283,6 +284,11 @@ func BenchmarkFind(b *testing.B) {
 		// 100_000_000,
 		// 1_000_000_000,
 	}
+	gammaValues := []float64{
+		1.1,
+		2.0,
+	}
+	partitionSizes := []int{2, 4, 6, 8, 16, 32, 64, 128, 256, 512}
 	tests := []variant[*bbhash.BBHash]{
 		{name: "Sequential", fn: bbhash.NewSequential},
 		{name: "Parallel", fn: bbhash.NewParallel},
@@ -290,41 +296,45 @@ func BenchmarkFind(b *testing.B) {
 	tests2 := []variant[*bbhash.BBHash2]{
 		{name: "Parallel2", fn2: bbhash.NewParallel2},
 	}
-	const gamma = 2.0
+
 	salt := rand.New(rand.NewSource(99)).Uint64()
 	for _, size := range sizes {
 		keys := generateKeys(size, 99)
 		for _, tt := range tests {
-			bb, err := tt.fn(gamma, salt, keys)
-			if err != nil {
-				b.Fatal(err)
-			}
-			b.Run(fmt.Sprintf("name=%s/gamma=%.1f/keys=%d", tt.name, gamma, size), func(b *testing.B) {
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
-					for _, k := range keys {
-						if bb.Find(k) == 0 {
-							b.Fatalf("can't find the key: %#x", k)
+			for _, gamma := range gammaValues {
+				bb, err := tt.fn(gamma, salt, keys)
+				if err != nil {
+					b.Fatal(err)
+				}
+				b.Run(fmt.Sprintf("name=%s/gamma=%.1f/keys=%d", tt.name, gamma, size), func(b *testing.B) {
+					b.ResetTimer()
+					for i := 0; i < b.N; i++ {
+						for _, k := range keys {
+							if bb.Find(k) == 0 {
+								b.Fatalf("can't find the key: %#x", k)
+							}
 						}
 					}
-				}
-			})
+				})
+			}
 		}
 		for _, tt := range tests2 {
-			bb, err := tt.fn(gamma, salt, keys)
-			if err != nil {
-				b.Fatal(err)
-			}
-			b.Run(fmt.Sprintf("name=%s/gamma=%.1f/keys=%d", tt.name, gamma, size), func(b *testing.B) {
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
-					for _, k := range keys {
-						if bb.Find(k) == 0 {
-							b.Fatalf("can't find the key: %#x", k)
+			for _, gamma := range gammaValues {
+				for _, partitionSize := range partitionSizes {
+					bb, _ := tt.fn2(gamma, partitionSize, salt, keys)
+					max, min := bb.MaxMinLevels()
+					b.Run(fmt.Sprintf("name=%s/gamma=%.1f/bpk=%.2f/Levels=%d,%d/PartitionSize=%d/keys=%d", tt.name, gamma, bb.BitsPerKey(), max, min, partitionSize, size), func(b *testing.B) {
+						b.ResetTimer()
+						for i := 0; i < b.N; i++ {
+							for _, k := range keys {
+								if bb.Find(k) == 0 {
+									b.Fatalf("can't find the key: %#x", k)
+								}
+							}
 						}
-					}
+					})
 				}
-			})
+			}
 		}
 	}
 }
