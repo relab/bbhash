@@ -12,11 +12,11 @@ func (bb BBHash2) String() string {
 	for _, bx := range bb.partitions {
 		for lvl, bv := range bx.bits {
 			if lvl >= len(lvlSz) {
-				lvlSz = append(lvlSz, bv.Size())
-				lvlEntries = append(lvlEntries, bv.OnesCount())
+				lvlSz = append(lvlSz, bv.size())
+				lvlEntries = append(lvlEntries, bv.onesCount())
 			} else {
-				lvlSz[lvl] += bv.Size()
-				lvlEntries[lvl] += bv.OnesCount()
+				lvlSz[lvl] += bv.size()
+				lvlEntries[lvl] += bv.onesCount()
 			}
 		}
 	}

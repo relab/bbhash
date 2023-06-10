@@ -58,9 +58,9 @@ func NewSequential(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
 // 2. The return value is in the expected range [1, len(keys)], but is a false positive.
 func (bb *BBHash) Find(key uint64) uint64 {
 	for lvl, bv := range bb.bits {
-		i := hash(bb.saltHash, uint64(lvl), key) % bv.Size()
-		if bv.IsSet(i) {
-			return bb.ranks[lvl] + bv.Rank(i)
+		i := hash(bb.saltHash, uint64(lvl), key) % bv.size()
+		if bv.isSet(i) {
+			return bb.ranks[lvl] + bv.rank(i)
 		}
 	}
 	return 0
@@ -82,14 +82,14 @@ func (bb *BBHash) compute(keys []uint64, gamma float64) error {
 		for _, k := range keys {
 			h := keyHash(lvlHash, k)
 			// update the bit and collision vectors for the current level
-			lvlVector.Update(h)
+			lvlVector.update(h)
 		}
 
 		// remove bit vector position assignments for colliding keys and add them to the redo set
 		for _, k := range keys {
 			h := keyHash(lvlHash, k)
 			// unset the bit vector position for the current key if it collided
-			if lvlVector.UnsetCollision(h) {
+			if lvlVector.unsetCollision(h) {
 				// keys to re-hash at next level : F in the paper
 				redo = append(redo, k)
 			}
@@ -123,6 +123,6 @@ func (bb *BBHash) computeLevelRanks() {
 	bb.ranks = make([]uint64, len(bb.bits))
 	for l, bv := range bb.bits {
 		bb.ranks[l] = rank
-		rank += bv.OnesCount()
+		rank += bv.onesCount()
 	}
 }

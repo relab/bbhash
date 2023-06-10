@@ -12,9 +12,9 @@ func (bb BBHash) String() string {
 	b.WriteString(fmt.Sprintf("BBHash(gamma=%3.1f, entries=%d, levels=%d, bits=%d, size=%s, bits per key=%3.1f, false positive rate=%.2f)\n",
 		bb.gamma(), bb.entries(), bb.Levels(), bb.numBits(), bb.space(), bb.BitsPerKey(), bb.falsePositiveRate()))
 	for i, bv := range bb.bits {
-		sz := readableSize(bv.Words() * 8)
-		entries := bv.OnesCount()
-		b.WriteString(fmt.Sprintf("  %d: %d / %d bits (%s)\n", i, entries, bv.Size(), sz))
+		sz := readableSize(bv.words() * 8)
+		entries := bv.onesCount()
+		b.WriteString(fmt.Sprintf("  %d: %d / %d bits (%s)\n", i, entries, bv.size(), sz))
 	}
 	return b.String()
 }
@@ -49,14 +49,14 @@ func readableSize(sizeInBytes uint64) string {
 // gamma returns an estimate of the gamma parameter used to construct the minimal perfect hash.
 // It is an estimate because the size of the level 0 bit vector is not necessarily a multiple of 64.
 func (bb BBHash) gamma() float64 {
-	lvl0Size := bb.bits[0].Size()
+	lvl0Size := bb.bits[0].size()
 	return float64(lvl0Size) / float64(bb.entries())
 }
 
 // entries returns the number of entries in the minimal perfect hash.
 func (bb BBHash) entries() (sz uint64) {
 	for _, bv := range bb.bits {
-		sz += bv.OnesCount()
+		sz += bv.onesCount()
 	}
 	return sz
 }
@@ -64,7 +64,7 @@ func (bb BBHash) entries() (sz uint64) {
 func (bb BBHash) perLevelEntries() []uint64 {
 	entries := make([]uint64, len(bb.bits))
 	for lvl, bv := range bb.bits {
-		entries[lvl] += bv.OnesCount()
+		entries[lvl] += bv.onesCount()
 	}
 	return entries
 }
@@ -72,7 +72,7 @@ func (bb BBHash) perLevelEntries() []uint64 {
 // numBits returns the number of bits used to represent the minimal perfect hash.
 func (bb BBHash) numBits() (sz uint64) {
 	for _, bv := range bb.bits {
-		sz += bv.Size()
+		sz += bv.size()
 	}
 	return sz
 }
