@@ -33,7 +33,7 @@ func NewParallel2(gamma float64, partitionSize int, salt uint64, keys []uint64) 
 		offset += len(partitionKeys[j])
 		grp.Go(func() error {
 			bb.partitions[j] = newBBHash(saltHash)
-			return bb.partitions[j].compute2(partitionKeys[j], gamma)
+			return bb.partitions[j].compute(partitionKeys[j], gamma)
 		})
 	}
 	if err := grp.Wait(); err != nil {

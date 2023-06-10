@@ -103,12 +103,11 @@ func TestSimple(t *testing.T) {
 		keys[i] = fnvHash(s)
 	}
 	tests := []variant[*bbhash.BBHash]{
-		{name: "Sequential_", fn: bbhash.NewSequential},
-		{name: "Sequential2", fn: bbhash.NewSequential2},
-		{name: "Parallel___", fn: bbhash.NewParallel},
+		{name: "Sequential", fn: bbhash.NewSequential},
+		{name: "Parallel__", fn: bbhash.NewParallel},
 	}
 	tests2 := []variant[*bbhash.BBHash2]{
-		{name: "Parallel2__", fn2: bbhash.NewParallel2},
+		{name: "Parallel2_", fn2: bbhash.NewParallel2},
 	}
 	for _, tt := range tests {
 		runMPHFTest(t, tt, keys, 2.0)
@@ -155,12 +154,11 @@ func TestFalsePositiveRate(t *testing.T) {
 
 func TestManyKeys(t *testing.T) {
 	tests := []variant[*bbhash.BBHash]{
-		{name: "Sequential_", fn: bbhash.NewSequential},
-		{name: "Sequential2", fn: bbhash.NewSequential2},
-		{name: "Parallel___", fn: bbhash.NewParallel},
+		{name: "Sequential", fn: bbhash.NewSequential},
+		{name: "Parallel__", fn: bbhash.NewParallel},
 	}
 	tests2 := []variant[*bbhash.BBHash2]{
-		{name: "Parallel2__", fn2: bbhash.NewParallel2},
+		{name: "Parallel2_", fn2: bbhash.NewParallel2},
 	}
 	sizes := []int{
 		1000,
@@ -193,12 +191,11 @@ func TestSlow(t *testing.T) {
 		100_000_000,
 	}
 	tests := []variant[*bbhash.BBHash]{
-		{name: "Sequential_", fn: bbhash.NewSequential},
-		{name: "Sequential2", fn: bbhash.NewSequential2},
-		{name: "Parallel___", fn: bbhash.NewParallel},
+		{name: "Sequential", fn: bbhash.NewSequential},
+		{name: "Parallel__", fn: bbhash.NewParallel},
 	}
 	tests2 := []variant[*bbhash.BBHash2]{
-		{name: "Parallel2__", fn2: bbhash.NewParallel2},
+		{name: "Parallel2_", fn2: bbhash.NewParallel2},
 	}
 	for _, size := range sizes {
 		keys := generateKeys(size, 99)
@@ -239,7 +236,6 @@ func BenchmarkNewBBHash(b *testing.B) {
 	}
 	tests := []variant[*bbhash.BBHash]{
 		{name: "Sequential", fn: bbhash.NewSequential},
-		{name: "Sequential2", fn: bbhash.NewSequential2},
 		{name: "Parallel", fn: bbhash.NewParallel},
 	}
 	tests2 := []variant[*bbhash.BBHash2]{
@@ -288,12 +284,11 @@ func BenchmarkFind(b *testing.B) {
 		// 1_000_000_000,
 	}
 	tests := []variant[*bbhash.BBHash]{
-		{name: "Sequential_", fn: bbhash.NewSequential},
-		{name: "Sequential2", fn: bbhash.NewSequential2},
-		{name: "Parallel___", fn: bbhash.NewParallel},
+		{name: "Sequential", fn: bbhash.NewSequential},
+		{name: "Parallel", fn: bbhash.NewParallel},
 	}
 	tests2 := []variant[*bbhash.BBHash2]{
-		{name: "Parallel2__", fn2: bbhash.NewParallel2},
+		{name: "Parallel2", fn2: bbhash.NewParallel2},
 	}
 	const gamma = 2.0
 	salt := rand.New(rand.NewSource(99)).Uint64()
