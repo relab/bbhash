@@ -8,34 +8,34 @@ func TestSetIsSet(t *testing.T) {
 	const words = 50
 	bv := newBitVector(words)
 
-	for i := uint64(0); i < bv.Size(); i++ {
-		if bv.IsSet(i) {
+	for i := uint64(0); i < bv.size(); i++ {
+		if bv.isSet(i) {
 			t.Errorf("IsSet(%d) = true, expected false", i)
 		}
 	}
-	for i := uint64(0); i < bv.Size(); i++ {
-		bv.Set(i)
-		if !bv.IsSet(i) {
+	for i := uint64(0); i < bv.size(); i++ {
+		bv.set(i)
+		if !bv.isSet(i) {
 			t.Errorf("IsSet(%d) = false, expected true", i)
 		}
 	}
 
-	bv.Reset(words)
+	bv.reset(words)
 
-	for i := uint64(0); i < bv.Size(); i++ {
-		if bv.IsSet(i) {
+	for i := uint64(0); i < bv.size(); i++ {
+		if bv.isSet(i) {
 			t.Errorf("IsSet(%d) = true, expected false", i)
 		}
 	}
-	for i := uint64(0); i < bv.Size(); i++ {
+	for i := uint64(0); i < bv.size(); i++ {
 		if i%2 == 0 {
 			continue
 		}
-		bv.Set(i)
+		bv.set(i)
 	}
 
-	for i := uint64(0); i < bv.Size(); i++ {
-		isSet := bv.IsSet(i)
+	for i := uint64(0); i < bv.size(); i++ {
+		isSet := bv.isSet(i)
 		if i%2 == 0 {
 			if isSet {
 				t.Errorf("IsSet(%d) = true, expected false", i)

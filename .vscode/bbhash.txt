@@ -1,3 +1,4 @@
+alloc
 bbhash
 benchmem
 benchstat
@@ -5,6 +6,7 @@ Boba
 Chewbacca
 Chikhi
 cpuprofile
+errgroup
 Fett
 Greedo
 Gryski
@@ -15,7 +17,9 @@ Jabba
 Kenobi
 Leia
 Limasset
+lvls
 memclr
+mphf
 ncpu
 Peterlongo
 Rayan
@@ -24,3 +28,4 @@ Revan
 Rizk
 Skywalker
 Sudhi
+vsink

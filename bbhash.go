@@ -1,9 +1,7 @@
 // Package bbhash implements the BBHash algorithm for minimal perfect hash functions.
 package bbhash
 
-import (
-	"fmt"
-)
+import "fmt"
 
 const (
 	// Heuristic: 32 levels should be enough for even very large key sets
@@ -23,6 +21,13 @@ type BBHash struct {
 	revIndex []uint64 // reverse index: only used for reverse mapping
 }
 
+func newBBHash(saltHash uint64) *BBHash {
+	return &BBHash{
+		bits:     make([]*bitVector, 0, initialLevels),
+		saltHash: saltHash,
+	}
+}
+
 // NewSequential creates a new BBHash for the given keys. The keys must be unique.
 // This creates the BBHash in a single goroutine.
 // The gamma parameter is the expansion factor for the bit vector; the paper recommends
@@ -33,10 +38,7 @@ func NewSequential(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
 	if gamma <= 1.0 {
 		gamma = 2.0
 	}
-	bb := &BBHash{
-		bits:     make([]*bitVector, 0, initialLevels),
-		saltHash: saltHash(salt),
-	}
+	bb := newBBHash(saltHash(salt))
 	if err := bb.compute(keys, gamma); err != nil {
 		return nil, err
 	}
@@ -56,9 +58,9 @@ func NewSequential(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
 // 2. The return value is in the expected range [1, len(keys)], but is a false positive.
 func (bb *BBHash) Find(key uint64) uint64 {
 	for lvl, bv := range bb.bits {
-		i := hash(bb.saltHash, uint64(lvl), key) % bv.Size()
-		if bv.IsSet(i) {
-			return bb.ranks[lvl] + bv.Rank(i)
+		i := hash(bb.saltHash, uint64(lvl), key) % bv.size()
+		if bv.isSet(i) {
+			return bb.ranks[lvl] + bv.rank(i)
 		}
 	}
 	return 0
@@ -67,10 +69,12 @@ func (bb *BBHash) Find(key uint64) uint64 {
 // compute computes the minimal perfect hash for the given keys.
 func (bb *BBHash) compute(keys []uint64, gamma float64) error {
 	sz := uint64(len(keys))
-	ld := newLevelData(sz, gamma)
+	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
+	// bit vectors for current level : A and C in the paper
+	lvlVector := newBCVector(words(sz, gamma))
 
 	// loop exits when keys == nil, i.e., when there are no more keys to re-hash
-	for lvl := uint(0); keys != nil; lvl++ {
+	for lvl := 0; keys != nil; lvl++ {
 		// precompute the level hash to speed up the key hashing
 		lvlHash := levelHash(bb.saltHash, uint64(lvl))
 
@@ -78,22 +82,30 @@ func (bb *BBHash) compute(keys []uint64, gamma float64) error {
 		for _, k := range keys {
 			h := keyHash(lvlHash, k)
 			// update the bit and collision vectors for the current level
-			ld.current.Update(h)
+			lvlVector.update(h)
 		}
 
 		// remove bit vector position assignments for colliding keys and add them to the redo set
 		for _, k := range keys {
 			h := keyHash(lvlHash, k)
 			// unset the bit vector position for the current key if it collided
-			if ld.current.UnsetCollision(h) {
-				ld.redo = append(ld.redo, k)
+			if lvlVector.unsetCollision(h) {
+				// keys to re-hash at next level : F in the paper
+				redo = append(redo, k)
 			}
 		}
 
 		// save the current bit vector for the current level
-		bb.bits = append(bb.bits, ld.current.bitVector())
+		bb.bits = append(bb.bits, lvlVector.bitVector())
+
+		sz = uint64(len(redo))
+		if sz == 0 {
+			break
+		}
 		// move to next level and compute the set of keys to re-hash (that had collisions)
-		keys = ld.nextLevel()
+		keys = redo
+		redo = redo[:0]
+		lvlVector.nextLevel(words(sz, gamma))
 
 		if lvl > maxLevel {
 			return fmt.Errorf("can't find minimal perfect hash after %d tries", lvl)
@@ -101,41 +113,6 @@ func (bb *BBHash) compute(keys []uint64, gamma float64) error {
 	}
 	bb.computeLevelRanks()
 	return nil
-}
-
-// lvlData holds intermediate results for the current level
-type lvlData struct {
-	current *bcVector // bit vectors for current level : A and C in the paper
-	redo    []uint64  // keys to re-hash at next level : F in the paper
-	gamma   float64
-}
-
-func newLevelData(sz uint64, gamma float64) *lvlData {
-	words := words(sz, gamma)
-	return &lvlData{
-		gamma:   gamma,
-		current: newBCVector(words),
-		redo:    make([]uint64, 0, sz/2), // heuristic: only 1/2 of the keys will collide
-	}
-}
-
-// nextLevel moves to the next level and returns the keys that need to be re-hashed.
-func (ld *lvlData) nextLevel() []uint64 {
-	remainingKeys := ld.redo
-	numKeys := uint64(len(remainingKeys))
-	if numKeys == 0 {
-		return nil
-	}
-	// Reset redo set for the next level, reusing the slice for the next level's keys.
-	// It is possible to reuse this slice since we are adding new keys to the redo slice
-	// after the corresponding keys have been processed from the current level's "keys" slice.
-	// That is, the redo slice is always a subset of the keys slice, and the redo keys' indices
-	// are trailing the indices of the keys slice.
-	ld.redo = ld.redo[:0:numKeys]
-	// number of words for the next level's bit vector
-	words := words(numKeys, ld.gamma)
-	ld.current.nextLevel(words)
-	return remainingKeys
 }
 
 // computeLevelRanks computes the total rank of each level.
@@ -146,6 +123,6 @@ func (bb *BBHash) computeLevelRanks() {
 	bb.ranks = make([]uint64, len(bb.bits))
 	for l, bv := range bb.bits {
 		bb.ranks[l] = rank
-		rank += bv.OnesCount()
+		rank += bv.onesCount()
 	}
 }

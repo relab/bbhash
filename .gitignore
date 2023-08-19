@@ -21,3 +21,4 @@ benchmark-results
 debug_test.go
 debug.go
 scratchpad/
+plots/

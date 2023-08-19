@@ -43,24 +43,15 @@ func (b *bcVector) bitVector() *bitVector {
 	return &bitVector{v: b.v}
 }
 
-func (b *bcVector) collisionVector() *bitVector {
-	return &bitVector{v: b.c}
-}
-
-// Size returns the number of bits this bit vector has allocated.
-func (b *bcVector) Size() uint64 {
+// size returns the number of bits this bit vector has allocated.
+func (b *bcVector) size() uint64 {
 	return uint64(len(b.v) * 64)
 }
 
-// Words returns the number of 64-bit words this bit vector has allocated.
-func (b *bcVector) Words() uint64 {
-	return uint64(len(b.v))
-}
-
-// Update sets the bit for the given hash h, and records a collision if the bit was already set.
+// update sets the bit for the given hash h, and records a collision if the bit was already set.
 // The bit position is determined by h modulo the size of the vector.
-func (b *bcVector) Update(h uint64) {
-	x := (h % b.Size()) / 64
+func (b *bcVector) update(h uint64) {
+	x := (h % b.size()) / 64
 	y := uint64(1 << (h & 63))
 	if b.v[x]&y != 0 {
 		// found one or more collisions at index i; update collision vector
@@ -71,11 +62,11 @@ func (b *bcVector) Update(h uint64) {
 	b.v[x] |= y
 }
 
-// UnsetCollision returns true if hash h's bit has a collision.
+// unsetCollision returns true if hash h's bit has a collision.
 // The vector is also unset for hash h's bit position.
 // The bit position is determined by h modulo the size of the vector.
-func (b *bcVector) UnsetCollision(h uint64) bool {
-	x := (h % b.Size()) / 64
+func (b *bcVector) unsetCollision(h uint64) bool {
+	x := (h % b.size()) / 64
 	y := uint64(1 << (h & 63))
 	if b.c[x]&y != 0 {
 		// found collision at index i; unset bit
@@ -86,8 +77,8 @@ func (b *bcVector) UnsetCollision(h uint64) bool {
 	return false
 }
 
-// Merge merges the local bcVector into the this bcVector.
-func (b *bcVector) Merge(local *bcVector) {
+// merge merges the local bcVector into the this bcVector.
+func (b *bcVector) merge(local *bcVector) {
 	// Below v (b.v) refers to the existing global bit vector, and lv (local.v) refers
 	// to the bit vector to be merged into the global bit vector.
 	//
@@ -114,11 +105,6 @@ func (b *bcVector) Merge(local *bcVector) {
 // String returns a string representation of the bit vector.
 func (b *bcVector) String() string {
 	return b.bitVector().String()
-}
-
-// Collisions returns a string representation of the collision vector.
-func (b *bcVector) Collisions() string {
-	return b.collisionVector().String()
 }
 
 // stringList returns a string list of true positions in the bit vector.

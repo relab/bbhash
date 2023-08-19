@@ -16,10 +16,7 @@ func NewParallel(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
 	if gamma <= 1.0 {
 		gamma = 2.0
 	}
-	bb := &BBHash{
-		bits:     make([]*bitVector, 0, initialLevels),
-		saltHash: saltHash(salt),
-	}
+	bb := newBBHash(saltHash(salt))
 	if err := bb.computeParallel(keys, gamma); err != nil {
 		return nil, err
 	}
@@ -50,7 +47,7 @@ func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 		if sz < 40000 {
 			for i := 0; i < len(keys); i++ {
 				h := keyHash(lvlHash, keys[i])
-				lvlVector.Update(h)
+				lvlVector.update(h)
 			}
 		} else {
 			z := sz / ncpu
@@ -74,7 +71,7 @@ func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 					for _, k := range keys[x:y] {
 						h := keyHash(lvlHash, k)
 						// update the bit and collision vectors for the current level
-						current.Update(h)
+						current.update(h)
 					}
 					wg.Done()
 				}()
@@ -82,7 +79,7 @@ func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 			wg.Wait()
 			// merge the per CPU bit and collision vectors into the global bit and collision vectors
 			for _, v := range perCPUVectors {
-				lvlVector.Merge(v)
+				lvlVector.merge(v)
 			}
 		}
 
@@ -90,7 +87,7 @@ func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 		for _, k := range keys {
 			h := keyHash(lvlHash, k)
 			// unset the bit vector position for the current key if it collided
-			if lvlVector.UnsetCollision(h) {
+			if lvlVector.unsetCollision(h) {
 				redo = append(redo, k)
 			}
 		}
