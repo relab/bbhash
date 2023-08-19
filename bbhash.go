@@ -17,8 +17,7 @@ const (
 type BBHash struct {
 	bits     []*bitVector
 	ranks    []uint64
-	saltHash uint64   // precomputed hash of the salt
-	revIndex []uint64 // reverse index: only used for reverse mapping
+	saltHash uint64 // precomputed hash of the salt
 }
 
 func newBBHash(saltHash uint64) *BBHash {
