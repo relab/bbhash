@@ -1,4 +1,5 @@
 alloc
+anypb
 bbhash
 benchmem
 benchstat
@@ -22,10 +23,13 @@ memclr
 mphf
 ncpu
 Peterlongo
+protobuf
+protostream
 Rayan
 relab
 Revan
 Rizk
 Skywalker
 Sudhi
+unmarshals
 vsink
