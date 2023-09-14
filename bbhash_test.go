@@ -220,6 +220,15 @@ var bbSink mphf
 // Then compare with:
 //
 //	benchstat -col /name new.txt
+//
+// Optionally, you can also compile the test binary and then run it with perf (Linux only):
+//
+//	go test -c ./
+//	perf stat ./bbhash.test -test.run=none -test.bench=NewBBHash -test.timeout=0 -test.count=1
+//
+// Note that the perf command requires that you have disabled the perf_event_paranoid setting:
+//
+//	sudo sysctl -w kernel.perf_event_paranoid=0
 func BenchmarkNewBBHash(b *testing.B) {
 	sizes := []int{
 		1000,
@@ -240,7 +249,7 @@ func BenchmarkNewBBHash(b *testing.B) {
 		{name: "Parallel", fn: bbhash.NewParallel},
 	}
 	tests2 := []variant[*bbhash.BBHash2]{
-		{name: "Parallel3", fn2: bbhash.NewParallel2},
+		{name: "Parallel2", fn2: bbhash.NewParallel2},
 	}
 	salt := rand.New(rand.NewSource(99)).Uint64()
 	for _, size := range sizes {
