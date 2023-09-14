@@ -1,5 +1,7 @@
 alloc
+bbchain
 bbhash
+bbhashbench
 benchmem
 benchstat
 Boba
