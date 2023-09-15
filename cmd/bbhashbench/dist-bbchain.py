@@ -1,6 +1,6 @@
 import os
 import subprocess
-import datetime
+from datetime import datetime
 
 
 def compile_go_program(go_file_path, output_path):
