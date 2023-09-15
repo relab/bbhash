@@ -35,14 +35,14 @@ func main() {
 		levels[numKeys] = lvls
 		bitsPerKey[numKeys] = bpk
 	}
-	filename := fmt.Sprintf("bbhash-%s-%.1f.csv", *name, *gamma)
+	filename := fmt.Sprintf("bbhash-%s-gamma-%.1f-partitions-%d.csv", *name, *gamma, *partitions)
 	writeCSVFile(filename, perKeyElapsed, perKeyElapsedFind, levels, bitsPerKey)
 }
 
 func keyRange(keys *int) []int {
 	if *keys == -1 {
-		return []int{1000, 10_000, 100_000}
-		// return []int{1000, 10_000, 100_000, 1000_000, 10_000_000, 100_000_000}
+		// return []int{1000, 10_000, 100_000}
+		return []int{1000, 10_000, 100_000, 1000_000, 10_000_000, 100_000_000}
 	}
 	return []int{*keys}
 }
