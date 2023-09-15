@@ -10,6 +10,7 @@ Chikhi
 cpuprofile
 errgroup
 Fett
+GOARCH
 Greedo
 Gryski
 Guillaume
@@ -20,6 +21,7 @@ Kenobi
 Leia
 Limasset
 lvls
+meling
 memclr
 mphf
 ncpu
@@ -29,5 +31,7 @@ relab
 Revan
 Rizk
 Skywalker
+struct
 Sudhi
+Unmarshal
 vsink
