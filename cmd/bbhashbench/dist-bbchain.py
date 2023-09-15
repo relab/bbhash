@@ -15,7 +15,8 @@ def compile_go_program(go_file_path, output_path):
 
 def dist_to_machine(binary_path, user, machine):
     cmd = ["ssh", f"{user}@{machine}", "pkill", "-f", binary_path]
-    subprocess.check_call(cmd)
+    # Don't check_call here because it will fail if the process is not running
+    subprocess.call(cmd)
     cmd = ["scp", binary_path, f"{user}@{machine}:~/"]
     subprocess.check_call(cmd)
 
