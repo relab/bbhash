@@ -1,6 +1,7 @@
 import os
 import subprocess
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 
 
 def compile_go_program(go_file_path, output_path):
@@ -34,11 +35,17 @@ def fetch_csv_files(user, machines):
         subprocess.check_call(cmd)
 
 
-def run(binary_name, user, machines, args=[]):
-    for machine in machines:
-        remote_command = f"./{binary_name} {' '.join(args)}"
-        cmd = ["ssh", f"{user}@{machine}", remote_command]
-        subprocess.check_call(cmd)
+def run(binary_name, user, machine, args=[]):
+    remote_command = f"./{binary_name} {' '.join(args)}"
+    cmd = ["ssh", f"{user}@{machine}", remote_command]
+    subprocess.check_call(cmd)
+
+
+def parallel_run(binary_name, user, configurations):
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(run, binary_name, user, machine, args) for machine, args in configurations]
+        for future in futures:
+            future.result()  # waits for thread to complete and raises exceptions if any occurred
 
 
 if __name__ == "__main__":
@@ -54,14 +61,20 @@ if __name__ == "__main__":
     distribute_binary(binary_output_path, user, machines)
 
     common = ["-gamma", "2.0", "-count", "20"]
-    run(binary, user, machines[0:2], common + ["-name", "seq"])
-    run(binary, user, machines[2:4], common + ["-name", "par"])
-
+    configurations = []
+    configurations.append((machines[0], common + ["-name", "seq"]))
+    configurations.append((machines[1], common + ["-name", "seq"]))
+    configurations.append((machines[2], common + ["-name", "par"]))
+    configurations.append((machines[3], common + ["-name", "par"]))
+    machine_index = 4
     partitions = [2, 4, 6, 8, 10, 12, 16, 24, 28, 32, 64, 128]
-    machine_index = 4  # Starting index for the machines list
     for partition in partitions:
         args = common + ["-name", "par2", "-partitions", str(partition)]
-        run(binary, user, machines[machine_index:machine_index+2], args)
-        machine_index += 2
+        configurations.append((machines[machine_index], args))
+        machine_index += 1
+        configurations.append((machines[machine_index], args))
+        machine_index += 1
+
+    parallel_run(binary, user, configurations)
 
     fetch_csv_files(user, machines)
