@@ -1,5 +1,6 @@
 import os
 import subprocess
+import datetime
 
 
 def compile_go_program(go_file_path, output_path):
@@ -14,6 +15,22 @@ def compile_go_program(go_file_path, output_path):
 def distribute_binary(binary_path, user, machines):
     for machine in machines:
         cmd = ["scp", binary_path, f"{user}@{machine}:~/"]
+        subprocess.check_call(cmd)
+
+
+def fetch_csv_files(user, machines):
+    # Create a directory named by the current date and time
+    date_str = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    base_directory = f"./bbhashbench_{date_str}"
+    os.makedirs(base_directory, exist_ok=True)
+
+    for machine in machines:
+        # Create a subdirectory for each machine
+        machine_directory = os.path.join(base_directory, machine)
+        os.makedirs(machine_directory, exist_ok=True)
+
+        remote_path = f"{user}@{machine}:~/*.csv"
+        cmd = ["scp", remote_path, machine_directory]
         subprocess.check_call(cmd)
 
 
@@ -47,4 +64,4 @@ if __name__ == "__main__":
         run(binary, user, machines[machine_index:machine_index+2], args)
         machine_index += 2
 
-# 2, 4, 6, 8, 10, 12, 16, 24, 28, 32, 48, 64, 128}
+    fetch_csv_files(user, machines)
