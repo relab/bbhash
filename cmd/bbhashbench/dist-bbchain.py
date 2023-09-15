@@ -13,10 +13,16 @@ def compile_go_program(go_file_path, output_path):
     subprocess.check_call(cmd, env=env)
 
 
+def dist_to_machine(binary_path, user, machine):
+    cmd = ["scp", binary_path, f"{user}@{machine}:~/"]
+    subprocess.check_call(cmd)
+
+
 def distribute_binary(binary_path, user, machines):
-    for machine in machines:
-        cmd = ["scp", binary_path, f"{user}@{machine}:~/"]
-        subprocess.check_call(cmd)
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(dist_to_machine, binary_path, user, machine) for machine in machines]
+        for future in futures:
+            future.result()  # waits for thread to complete and raises exceptions if any occurred
 
 
 def fetch_csv_files(user, machines):
