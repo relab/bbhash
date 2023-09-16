@@ -234,16 +234,17 @@ func BenchmarkNewBBHash(b *testing.B) {
 		1000,
 		10_000,
 		100_000,
-		1_000_000,
+		// 1_000_000,
 		// 10_000_000,
 		// 100_000_000,
 		// 1_000_000_000,
 	}
 	gammaValues := []float64{
 		1.1,
+		1.5,
 		2.0,
 	}
-	partitionSizes := []int{2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 48, 64, 128}
+	partitionSizes := []int{8, 16, 24, 32, 48, 64, 128}
 	tests := []variant[*bbhash.BBHash]{
 		{name: "Sequential", fn: bbhash.NewSequential},
 		{name: "Parallel", fn: bbhash.NewParallel},
@@ -288,16 +289,17 @@ func BenchmarkFind(b *testing.B) {
 		1000,
 		10_000,
 		100_000,
-		1_000_000,
+		// 1_000_000,
 		// 10_000_000,
 		// 100_000_000,
 		// 1_000_000_000,
 	}
 	gammaValues := []float64{
 		1.1,
+		1.5,
 		2.0,
 	}
-	partitionSizes := []int{2, 4, 6, 8, 16, 32, 64, 128, 256, 512}
+	partitionSizes := []int{8, 16, 24, 32, 48, 64, 128}
 	tests := []variant[*bbhash.BBHash]{
 		{name: "Sequential", fn: bbhash.NewSequential},
 		{name: "Parallel", fn: bbhash.NewParallel},
