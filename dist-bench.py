@@ -66,9 +66,9 @@ if __name__ == "__main__":
     common = ["-test.run=none",  "-test.count=1", "-test.timeout=0"]
     configurations = []
     for machine in machines[:15]:
-        configurations.append((machine, common + ["-test.bench=BenchmarkNewBBHash"]))
+        configurations.append((machine, common + ["-test.bench=BenchmarkNewBBHash", ">", machine+"-new.txt"]))
     for machine in machines[15:]:
-        configurations.append((machine, common + ["-test.bench=BenchmarkFind"]))
+        configurations.append((machine, common + ["-test.bench=BenchmarkFind", ">", machine+"-find.txt"]))
 
     parallel_run(binary, user, configurations)
 
