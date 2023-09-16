@@ -23,3 +23,6 @@ debug.go
 scratchpad/
 plots/
 cmd/bbhashbench/bbhashbench
+cmd/bbhashbench/bbhash-data.tgz
+cmd/bbhashbench/bbhashbench_2023-09-15_21-49-14/
+cmd/bbhashbench/plot/
