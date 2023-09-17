@@ -63,7 +63,7 @@ if __name__ == "__main__":
     compile_go_test()
     distribute_binary(binary, user, machines)
 
-    common = ["-test.run=none",  "-test.count=1", "-test.timeout=0"]
+    common = ["-test.run=none",  "-test.count=1", "-test.timeout=0", "-test.benchmem"]
     configurations = []
     for machine in machines[:15]:
         configurations.append((machine, common + ["-test.bench=BenchmarkNewBBHash", ">", machine+"-new.txt"]))
