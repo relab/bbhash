@@ -10,13 +10,11 @@ import (
 // This creates the BBHash using multiple goroutines.
 // The gamma parameter is the expansion factor for the bit vector; the paper recommends
 // a value of 2.0. The larger the value the more memory will be consumed by the BBHash.
-// The salt parameter is used to salt the hash function. Depending on your use case,
-// you may use a cryptographic- or a pseudo-random number for the salt.
-func NewParallel(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
+func NewParallel(gamma float64, keys []uint64) (*BBHash, error) {
 	if gamma <= 1.0 {
 		gamma = 2.0
 	}
-	bb := newBBHash(saltHash(salt))
+	bb := newBBHash()
 	if err := bb.computeParallel(keys, gamma); err != nil {
 		return nil, err
 	}
@@ -42,7 +40,7 @@ func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 	// loop exits when keys == nil, i.e., when there are no more keys to re-hash
 	for lvl := uint(0); keys != nil; lvl++ {
 		// precompute the level hash to speed up the key hashing
-		lvlHash := levelHash(bb.saltHash, uint64(lvl))
+		lvlHash := levelHash(uint64(lvl))
 
 		if sz < 40000 {
 			for i := 0; i < len(keys); i++ {

@@ -13,9 +13,7 @@ type BBHash2 struct {
 // This partitions the input and creates multiple BBHashes using multiple goroutines.
 // The gamma parameter is the expansion factor for the bit vector; the paper recommends
 // a value of 2.0. The larger the value the more memory will be consumed by the BBHash.
-// The salt parameter is used to salt the hash function. Depending on your use case,
-// you may use a cryptographic- or a pseudo-random number for the salt.
-func NewParallel2(gamma float64, partitionSize int, salt uint64, keys []uint64) (*BBHash2, error) {
+func NewParallel2(gamma float64, partitionSize int, keys []uint64) (*BBHash2, error) {
 	partitionKeys := make([][]uint64, partitionSize)
 	for _, k := range keys {
 		i := k % uint64(partitionSize)
@@ -25,14 +23,13 @@ func NewParallel2(gamma float64, partitionSize int, salt uint64, keys []uint64) 
 		partitions: make([]*BBHash, partitionSize),
 		offsets:    make([]int, partitionSize),
 	}
-	saltHash := saltHash(salt)
 	grp := &errgroup.Group{}
 	for offset, j := 0, 0; j < partitionSize; j++ {
 		j := j
 		bb.offsets[j] = offset
 		offset += len(partitionKeys[j])
 		grp.Go(func() error {
-			bb.partitions[j] = newBBHash(saltHash)
+			bb.partitions[j] = newBBHash()
 			return bb.partitions[j].compute(partitionKeys[j], gamma)
 		})
 	}

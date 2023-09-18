@@ -15,15 +15,13 @@ const (
 
 // BBHash represents a minimal perfect hash for a set of keys.
 type BBHash struct {
-	bits     []*bitVector
-	ranks    []uint64
-	saltHash uint64 // precomputed hash of the salt
+	bits  []*bitVector
+	ranks []uint64
 }
 
-func newBBHash(saltHash uint64) *BBHash {
+func newBBHash() *BBHash {
 	return &BBHash{
-		bits:     make([]*bitVector, 0, initialLevels),
-		saltHash: saltHash,
+		bits: make([]*bitVector, 0, initialLevels),
 	}
 }
 
@@ -31,13 +29,11 @@ func newBBHash(saltHash uint64) *BBHash {
 // This creates the BBHash in a single goroutine.
 // The gamma parameter is the expansion factor for the bit vector; the paper recommends
 // a value of 2.0. The larger the value the more memory will be consumed by the BBHash.
-// The salt parameter is used to salt the hash function. Depending on your use case,
-// you may use a cryptographic- or a pseudo-random number for the salt.
-func NewSequential(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
+func NewSequential(gamma float64, keys []uint64) (*BBHash, error) {
 	if gamma <= 1.0 {
 		gamma = 2.0
 	}
-	bb := newBBHash(saltHash(salt))
+	bb := newBBHash()
 	if err := bb.compute(keys, gamma); err != nil {
 		return nil, err
 	}
@@ -57,7 +53,7 @@ func NewSequential(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
 // 2. The return value is in the expected range [1, len(keys)], but is a false positive.
 func (bb *BBHash) Find(key uint64) uint64 {
 	for lvl, bv := range bb.bits {
-		i := hash(bb.saltHash, uint64(lvl), key) % bv.size()
+		i := hash(uint64(lvl), key) % bv.size()
 		if bv.isSet(i) {
 			return bb.ranks[lvl] + bv.rank(i)
 		}
@@ -75,7 +71,7 @@ func (bb *BBHash) compute(keys []uint64, gamma float64) error {
 	// loop exits when keys == nil, i.e., when there are no more keys to re-hash
 	for lvl := 0; keys != nil; lvl++ {
 		// precompute the level hash to speed up the key hashing
-		lvlHash := levelHash(bb.saltHash, uint64(lvl))
+		lvlHash := levelHash(uint64(lvl))
 
 		// find colliding keys and possible bit vector positions for non-colliding keys
 		for _, k := range keys {

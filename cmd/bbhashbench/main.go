@@ -17,7 +17,6 @@ func main() {
 	var (
 		name       = flag.String("name", "seq", "name of the mphf to benchmark (seq, par, par2)")
 		gamma      = flag.Float64("gamma", 2.0, "gamma parameter")
-		salt       = flag.Uint64("salt", 99, "salt parameter")
 		keys       = flag.Int("keys", -1, "number of keys to use (default: runs over a range of keys; can take a long time)")
 		partitions = flag.Int("partitions", 1, "number of partitions to use (for par2 only)")
 		count      = flag.Int("count", 1, "number of times to run the benchmark")
@@ -29,7 +28,7 @@ func main() {
 	levels := make(map[int]int, *count)
 	bitsPerKey := make(map[int]float64, *count)
 	for _, numKeys := range keyRange(keys) {
-		elapsed, elapsedFind, lvls, bpk := run(*name, numKeys, *gamma, *salt, *count, *partitions)
+		elapsed, elapsedFind, lvls, bpk := run(*name, numKeys, *gamma, *count, *partitions)
 		perKeyElapsed[numKeys] = elapsed
 		perKeyElapsedFind[numKeys] = elapsedFind
 		levels[numKeys] = lvls
@@ -42,20 +41,20 @@ func main() {
 func keyRange(keys *int) []int {
 	if *keys == -1 {
 		// return []int{1000, 10_000, 100_000}
-		return []int{1000, 10_000, 100_000, 1000_000}
-		// return []int{1000, 10_000, 100_000, 1000_000, 10_000_000, 100_000_000}
+		// return []int{1000, 10_000, 100_000, 1000_000}
+		return []int{1000, 10_000, 100_000, 1000_000, 10_000_000, 100_000_000}
 	}
 	return []int{*keys}
 }
 
-func run(name string, keys int, gamma float64, salt uint64, count, partitions int) ([]time.Duration, []time.Duration, int, float64) {
+func run(name string, keys int, gamma float64, count, partitions int) ([]time.Duration, []time.Duration, int, float64) {
 	switch name {
 	case "seq":
-		return runSequential(keys, gamma, salt, count)
+		return runSequential(keys, gamma, count)
 	case "par":
-		return runParallel(keys, gamma, salt, count)
+		return runParallel(keys, gamma, count)
 	case "par2":
-		return runParallel2(keys, partitions, gamma, salt, count)
+		return runParallel2(keys, partitions, gamma, count)
 	default:
 		panic("unknown mphf name")
 	}
@@ -99,14 +98,14 @@ func writeCSVFile(filename string, create, find map[int][]time.Duration, levels 
 	return w.Error()
 }
 
-func runSequential(numKeys int, gamma float64, salt uint64, count int) ([]time.Duration, []time.Duration, int, float64) {
+func runSequential(numKeys int, gamma float64, count int) ([]time.Duration, []time.Duration, int, float64) {
 	keys := generateKeys(numKeys, 99)
 	var bb *bbhash.BBHash
 	var err error
 	elapsed := make([]time.Duration, count)
 	for i := 0; i < count; i++ {
 		start := time.Now()
-		bb, err = bbhash.NewSequential(gamma, salt, keys)
+		bb, err = bbhash.NewSequential(gamma, keys)
 		elapsed[i] = time.Since(start)
 		if err != nil {
 			panic(err)
@@ -116,14 +115,14 @@ func runSequential(numKeys int, gamma float64, salt uint64, count int) ([]time.D
 	return elapsed, findAll(bb, keys, count), bb.Levels(), bb.BitsPerKey()
 }
 
-func runParallel(numKeys int, gamma float64, salt uint64, count int) ([]time.Duration, []time.Duration, int, float64) {
+func runParallel(numKeys int, gamma float64, count int) ([]time.Duration, []time.Duration, int, float64) {
 	keys := generateKeys(numKeys, 99)
 	var bb *bbhash.BBHash
 	var err error
 	elapsed := make([]time.Duration, count)
 	for i := 0; i < count; i++ {
 		start := time.Now()
-		bb, err = bbhash.NewParallel(gamma, salt, keys)
+		bb, err = bbhash.NewParallel(gamma, keys)
 		elapsed[i] = time.Since(start)
 		if err != nil {
 			panic(err)
@@ -133,14 +132,14 @@ func runParallel(numKeys int, gamma float64, salt uint64, count int) ([]time.Dur
 	return elapsed, findAll(bb, keys, count), bb.Levels(), bb.BitsPerKey()
 }
 
-func runParallel2(numKeys, numPartitions int, gamma float64, salt uint64, count int) ([]time.Duration, []time.Duration, int, float64) {
+func runParallel2(numKeys, numPartitions int, gamma float64, count int) ([]time.Duration, []time.Duration, int, float64) {
 	keys := generateKeys(numKeys, 99)
 	var bb *bbhash.BBHash2
 	var err error
 	elapsed := make([]time.Duration, count)
 	for i := 0; i < count; i++ {
 		start := time.Now()
-		bb, err = bbhash.NewParallel2(gamma, numPartitions, salt, keys)
+		bb, err = bbhash.NewParallel2(gamma, numPartitions, keys)
 		elapsed[i] = time.Since(start)
 		if err != nil {
 			panic(err)
