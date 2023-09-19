@@ -14,10 +14,7 @@ func hash(level, key uint64) uint64 {
 
 // levelHash returns the hash of the given level.
 func levelHash(level uint64) uint64 {
-	var h uint64
-	h ^= mix(level)
-	h *= m
-	return h
+	return mix(level) * m
 }
 
 // keyHash returns the hash of a key given a level hash.
