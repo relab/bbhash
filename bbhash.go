@@ -34,7 +34,7 @@ func NewSequential(gamma float64, keys []uint64) (*BBHash, error) {
 		gamma = 2.0
 	}
 	bb := newBBHash()
-	if err := bb.compute(keys, gamma); err != nil {
+	if err := bb.compute(gamma, keys); err != nil {
 		return nil, err
 	}
 	return bb, nil
@@ -62,7 +62,7 @@ func (bb *BBHash) Find(key uint64) uint64 {
 }
 
 // compute computes the minimal perfect hash for the given keys.
-func (bb *BBHash) compute(keys []uint64, gamma float64) error {
+func (bb *BBHash) compute(gamma float64, keys []uint64) error {
 	sz := len(keys)
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
 	// bit vectors for current level : A and C in the paper

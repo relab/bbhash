@@ -15,14 +15,14 @@ func NewParallel(gamma float64, keys []uint64) (*BBHash, error) {
 		gamma = 2.0
 	}
 	bb := newBBHash()
-	if err := bb.computeParallel(keys, gamma); err != nil {
+	if err := bb.computeParallel(gamma, keys); err != nil {
 		return nil, err
 	}
 	return bb, nil
 }
 
 // computeParallel computes the minimal perfect hash for the given keys in parallel by sharding the keys.
-func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
+func (bb *BBHash) computeParallel(gamma float64, keys []uint64) error {
 	sz := len(keys)
 	wds := words(sz, gamma)
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide

@@ -30,7 +30,7 @@ func NewParallel2(gamma float64, partitionSize int, keys []uint64) (*BBHash2, er
 		offset += len(partitionKeys[j])
 		grp.Go(func() error {
 			bb.partitions[j] = newBBHash()
-			return bb.partitions[j].compute(partitionKeys[j], gamma)
+			return bb.partitions[j].compute(gamma, partitionKeys[j])
 		})
 	}
 	if err := grp.Wait(); err != nil {
