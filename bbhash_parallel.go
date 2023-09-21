@@ -24,7 +24,7 @@ func NewParallel(gamma float64, keys []uint64) (*BBHash, error) {
 // computeParallel computes the minimal perfect hash for the given keys in parallel by sharding the keys.
 func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 	sz := len(keys)
-	wds := words(uint64(sz), gamma)
+	wds := words(sz, gamma)
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
 	// bit vectors for current level : A and C in the paper
 	lvlVector := newBCVector(wds)
@@ -92,6 +92,7 @@ func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 
 		// save the current bit vector for the current level
 		bb.bits = append(bb.bits, lvlVector.bitVector())
+
 		sz = len(redo)
 		if sz == 0 {
 			break
@@ -99,7 +100,7 @@ func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 		// move to next level and compute the set of keys to re-hash (that had collisions)
 		keys = redo
 		redo = redo[:0]
-		wds = words(uint64(sz), gamma)
+		wds = words(sz, gamma)
 		lvlVector.nextLevel(wds)
 
 		if lvl > maxLevel {

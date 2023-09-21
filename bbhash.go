@@ -63,7 +63,7 @@ func (bb *BBHash) Find(key uint64) uint64 {
 
 // compute computes the minimal perfect hash for the given keys.
 func (bb *BBHash) compute(keys []uint64, gamma float64) error {
-	sz := uint64(len(keys))
+	sz := len(keys)
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
 	// bit vectors for current level : A and C in the paper
 	lvlVector := newBCVector(words(sz, gamma))
@@ -93,7 +93,7 @@ func (bb *BBHash) compute(keys []uint64, gamma float64) error {
 		// save the current bit vector for the current level
 		bb.bits = append(bb.bits, lvlVector.bitVector())
 
-		sz = uint64(len(redo))
+		sz = len(redo)
 		if sz == 0 {
 			break
 		}
