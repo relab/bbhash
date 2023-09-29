@@ -172,40 +172,6 @@ func TestSlow(t *testing.T) {
 	}
 }
 
-// Run with:
-//
-//	go test -run TestFalsePositiveRate
-//
-// Avoid the -v argument to make it more readable.
-func TestFalsePositiveRate(t *testing.T) {
-	sizes := []int{
-		1000,
-		10_000,
-		100_000,
-	}
-	for _, gamma := range []float64{1.1, 1.5, 1.7, 2.0, 2.5, 3.0, 5.0} {
-		for _, size := range sizes {
-			keys := generateKeys(size, 123)
-			t.Run(fmt.Sprintf("gamma=%0.1f/keys=%d", gamma, size), func(t *testing.T) {
-				bb, err := bbhash.NewSequential(gamma, keys)
-				if err != nil {
-					t.Fatal(err)
-				}
-				keyMap := make(map[uint64]uint64)
-				for keyIndex, key := range keys {
-					hashIndex := bb.Find(key)
-					checkKey(t, keyIndex, key, uint64(len(keys)), hashIndex)
-					if x, ok := keyMap[hashIndex]; ok {
-						t.Errorf("index %d already mapped to key %#x", hashIndex, x)
-					}
-					keyMap[hashIndex] = key
-				}
-				fmt.Println(bb)
-			})
-		}
-	}
-}
-
 var bbSink mphf
 
 // BenchmarkNewBBHash benchmarks the construction of a new BBHash using
