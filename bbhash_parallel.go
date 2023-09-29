@@ -10,23 +10,21 @@ import (
 // This creates the BBHash using multiple goroutines.
 // The gamma parameter is the expansion factor for the bit vector; the paper recommends
 // a value of 2.0. The larger the value the more memory will be consumed by the BBHash.
-// The salt parameter is used to salt the hash function. Depending on your use case,
-// you may use a cryptographic- or a pseudo-random number for the salt.
-func NewParallel(gamma float64, salt uint64, keys []uint64) (*BBHash, error) {
+func NewParallel(gamma float64, keys []uint64) (*BBHash, error) {
 	if gamma <= 1.0 {
 		gamma = 2.0
 	}
-	bb := newBBHash(saltHash(salt))
-	if err := bb.computeParallel(keys, gamma); err != nil {
+	bb := newBBHash()
+	if err := bb.computeParallel(gamma, keys); err != nil {
 		return nil, err
 	}
 	return bb, nil
 }
 
 // computeParallel computes the minimal perfect hash for the given keys in parallel by sharding the keys.
-func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
+func (bb *BBHash) computeParallel(gamma float64, keys []uint64) error {
 	sz := len(keys)
-	wds := words(uint64(sz), gamma)
+	wds := words(sz, gamma)
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
 	// bit vectors for current level : A and C in the paper
 	lvlVector := newBCVector(wds)
@@ -42,7 +40,7 @@ func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 	// loop exits when keys == nil, i.e., when there are no more keys to re-hash
 	for lvl := uint(0); keys != nil; lvl++ {
 		// precompute the level hash to speed up the key hashing
-		lvlHash := levelHash(bb.saltHash, uint64(lvl))
+		lvlHash := levelHash(uint64(lvl))
 
 		if sz < 40000 {
 			for i := 0; i < len(keys); i++ {
@@ -94,6 +92,7 @@ func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 
 		// save the current bit vector for the current level
 		bb.bits = append(bb.bits, lvlVector.bitVector())
+
 		sz = len(redo)
 		if sz == 0 {
 			break
@@ -101,7 +100,7 @@ func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 		// move to next level and compute the set of keys to re-hash (that had collisions)
 		keys = redo
 		redo = redo[:0]
-		wds = words(uint64(sz), gamma)
+		wds = words(sz, gamma)
 		lvlVector.nextLevel(wds)
 
 		if lvl > maxLevel {

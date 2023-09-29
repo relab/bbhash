@@ -19,7 +19,7 @@ func newBitVector(words uint64) *bitVector {
 }
 
 // words returns the number of words the bit vector needs to hold size bits, with expansion factor gamma.
-func words(size uint64, gamma float64) uint64 {
+func words(size int, gamma float64) uint64 {
 	sz := uint64(float64(size) * gamma)
 	return (sz + 63) / 64
 }

@@ -15,10 +15,17 @@
 *.prof
 
 # Stuff to ignore for now
-marshal_hack.go
 benchmark-results
 .vscode/launch.json
 debug_test.go
 debug.go
 scratchpad/
 plots/
+cmd/bbhashbench/bbhashbench
+cmd/bbhashbench/bbhash-data.tgz
+cmd/bbhashbench/bbhashbench_2023-09-15_21-49-14/
+cmd/bbhashbench/plot/
+bbhash.test_2023-09-17_00-29-22/
+bbhash.test.tgz
+TODO.txt
+IDEAS.md

@@ -6,17 +6,15 @@ import (
 )
 
 func TestFastHash(t *testing.T) {
-	salt := uint64(0xdeadbeef)
-	saltHash := saltHash(salt)
 	for lvl := uint64(0); lvl < 5; lvl++ {
-		lvlHash := levelHash(saltHash, lvl)
+		lvlHash := levelHash(lvl)
 		for key := uint64(0); key < 5; key++ {
-			slowHash := hash(saltHash, lvl, key)
+			slowHash := hash(lvl, key)
 			fastHash := keyHash(lvlHash, key)
 			if slowHash != fastHash {
-				t.Errorf("hash(%#x, %d, %d) != keyHash(%#x, %d)", saltHash, lvl, key, lvlHash, key)
-				t.Logf("   hash(saltHash=%#x,lvl=%d,key=%d): %#x", saltHash, lvl, key, slowHash)
-				t.Logf("keyHash(saltHash=%#x,lvl=%d,key=%d): %#x", saltHash, lvl, key, fastHash)
+				t.Errorf("hash(%d, %d) != keyHash(%#x, %d)", lvl, key, lvlHash, key)
+				t.Logf("   hash(lvl=%d,key=%d): %#x", lvl, key, slowHash)
+				t.Logf("keyHash(lvl=%d,key=%d): %#x", lvl, key, fastHash)
 			}
 		}
 	}
@@ -25,10 +23,8 @@ func TestFastHash(t *testing.T) {
 var sink uint64
 
 func BenchmarkHashLevel(b *testing.B) {
-	salt := uint64(0xdeadbeef)
-	saltHash := saltHash(salt)
 	for lvl := uint64(0); lvl < 5; lvl++ {
-		lvlHash := levelHash(saltHash, lvl)
+		lvlHash := levelHash(lvl)
 		b.Run(fmt.Sprintf("lvl=%d", lvl), func(b *testing.B) {
 			for key := 0; key < b.N; key++ {
 				sink = keyHash(lvlHash, uint64(key))
@@ -38,12 +34,10 @@ func BenchmarkHashLevel(b *testing.B) {
 }
 
 func BenchmarkHashFull(b *testing.B) {
-	salt := uint64(0xdeadbeef)
-	saltHash := saltHash(salt)
 	for lvl := uint64(0); lvl < 5; lvl++ {
 		b.Run(fmt.Sprintf("lvl=%d", lvl), func(b *testing.B) {
 			for key := 0; key < b.N; key++ {
-				sink = hash(saltHash, lvl, uint64(key))
+				sink = hash(lvl, uint64(key))
 			}
 		})
 	}

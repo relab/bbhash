@@ -7,25 +7,14 @@ import (
 
 const m uint64 = 0x880355f21e6d1965
 
-// hash returns the hash of a salt, level, and key.
-func hash(saltHash, lvl, key uint64) uint64 {
-	return keyHash(levelHash(saltHash, lvl), key)
+// hash returns the hash of the current level and key.
+func hash(level, key uint64) uint64 {
+	return keyHash(levelHash(level), key)
 }
 
-// saltHash returns the hash of a salt.
-func saltHash(salt uint64) uint64 {
-	var h uint64 = m
-	h ^= mix(salt)
-	h *= m
-	return h
-}
-
-// levelHash returns the hash of a level given a salt hash.
-func levelHash(saltHash, lvl uint64) uint64 {
-	var h uint64 = saltHash
-	h ^= mix(lvl)
-	h *= m
-	return h
+// levelHash returns the hash of the given level.
+func levelHash(level uint64) uint64 {
+	return mix(level) * m
 }
 
 // keyHash returns the hash of a key given a level hash.
