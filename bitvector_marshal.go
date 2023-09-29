@@ -6,8 +6,10 @@ import (
 	"fmt"
 )
 
+// marshaledLength returns the number of bytes needed to marshal the bit vector.
 func (b *bitVector) marshaledLength() int {
-	return 8 + len(b.v)*8
+	const uint64bytes = 8
+	return uint64bytes * (1 + len(b.v))
 }
 
 // MarshalBinary implements the encoding.BinaryMarshaler interface.

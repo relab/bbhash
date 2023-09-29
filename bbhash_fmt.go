@@ -9,8 +9,8 @@ import (
 // String returns a string representation of BBHash with overall and per-level statistics.
 func (bb BBHash) String() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("BBHash(gamma=%3.1f, entries=%d, levels=%d, bits=%d, size=%s, bits per key=%3.1f, false positive rate=%.2f)\n",
-		bb.gamma(), bb.entries(), bb.Levels(), bb.numBits(), bb.space(), bb.BitsPerKey(), bb.falsePositiveRate()))
+	b.WriteString(fmt.Sprintf("BBHash(gamma=%3.1f, entries=%d, levels=%d, mem bits=%d, wire bits=%d, size=%s, bits per key=%3.1f, false positive rate=%.2f)\n",
+		bb.gamma(), bb.entries(), bb.Levels(), bb.numBits(), bb.wireBits(), bb.space(), bb.BitsPerKey(), bb.falsePositiveRate()))
 	for i, bv := range bb.bits {
 		sz := readableSize(bv.words() * 8)
 		entries := bv.onesCount()
@@ -69,7 +69,7 @@ func (bb BBHash) perLevelEntries() []uint64 {
 	return entries
 }
 
-// numBits returns the number of bits used to represent the minimal perfect hash.
+// numBits returns the number of in-memory bits used to represent the minimal perfect hash.
 func (bb BBHash) numBits() (sz uint64) {
 	for _, bv := range bb.bits {
 		sz += bv.size()
@@ -78,14 +78,23 @@ func (bb BBHash) numBits() (sz uint64) {
 	return sz
 }
 
+// wireBits returns the number of on-the-wire bits used to represent the minimal perfect hash on the wire.
+func (bb BBHash) wireBits() (sz uint64) {
+	sz += 64 // for the header
+	for _, bv := range bb.bits {
+		sz += uint64(bv.marshaledLength()) * 8
+	}
+	return sz
+}
+
 // BitsPerKey returns the number of bits per key in the minimal perfect hash.
 func (bb BBHash) BitsPerKey() float64 {
-	return float64(bb.numBits()) / float64(bb.entries())
+	return float64(bb.wireBits()) / float64(bb.entries())
 }
 
 // space returns the space required by the minimal perfect hash in human readable format.
 func (bb BBHash) space() string {
-	return readableSize(bb.numBits() / 8)
+	return readableSize(bb.wireBits() / 8)
 }
 
 // Levels returns the number of Levels in the minimal perfect hash.
