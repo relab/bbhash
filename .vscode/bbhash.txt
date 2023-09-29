@@ -5,12 +5,14 @@ bbhashbench
 benchmem
 benchstat
 Boba
+buf's
 Chewbacca
 Chikhi
 cpuprofile
 errgroup
 Fett
 GOARCH
+goroutines
 Greedo
 Gryski
 Guillaume
@@ -35,4 +37,5 @@ Skywalker
 struct
 Sudhi
 Unmarshal
+unmarshalled
 vsink
