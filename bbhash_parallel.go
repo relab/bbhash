@@ -37,8 +37,8 @@ func (bb *BBHash) computeParallel(gamma float64, keys []uint64) error {
 		}
 	}
 
-	// loop exits when keys == nil, i.e., when there are no more keys to re-hash
-	for lvl := uint(0); keys != nil; lvl++ {
+	// loop exits when there are no more keys to re-hash (see break statement below)
+	for lvl := 0; true; lvl++ {
 		// precompute the level hash to speed up the key hashing
 		lvlHash := levelHash(uint64(lvl))
 
