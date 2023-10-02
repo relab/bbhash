@@ -73,6 +73,10 @@ func (bb BBHash2) numBits() (sz uint64) {
 
 // wireBits returns the number of on-the-wire bits used to represent the minimal perfect hash on the wire.
 func (bb BBHash2) wireBits() (sz uint64) {
+	if len(bb.partitions) == 1 {
+		// no need to account for the offset since there is only one partition
+		return bb.partitions[0].wireBits()
+	}
 	const sizeOfInt = 64
 	for _, bx := range bb.partitions {
 		sz += bx.wireBits()

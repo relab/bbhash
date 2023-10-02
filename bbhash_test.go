@@ -16,7 +16,7 @@ type mphf interface{ Find(uint64) uint64 }
 type variant[T mphf] struct {
 	name string
 	fn   func(gamma float64, keys []uint64) (T, error)
-	fn2  func(gamma float64, partitionSize int, keys []uint64) (T, error)
+	fn2  func(gamma float64, partitions int, keys []uint64) (T, error)
 }
 
 func runMPHFTest[T mphf](t *testing.T, tt variant[T], keys []uint64, gamma float64) {
@@ -172,14 +172,12 @@ func TestSlow(t *testing.T) {
 	}
 }
 
-var bbSink mphf
-
-// BenchmarkNewBBHash benchmarks the construction of a new BBHash using
+// BenchmarkBBHashNew benchmarks the construction of a new BBHash using
 // sequential and parallel variants. This will take a long time to run,
 // especially if you enable large sizes. Thus, to avoid timeouts, you
 // should run this with a -timeout=0 argument.
 //
-//	go test -run x -bench BenchmarkNewBBHash -benchmem -timeout=0 -count 10 > new.txt
+//	go test -run x -bench BenchmarkBBHashNew -benchmem -timeout=0 -count 10 > new.txt
 //
 // Then compare with:
 //
@@ -188,96 +186,63 @@ var bbSink mphf
 // Optionally, you can also compile the test binary and then run it with perf (Linux only):
 //
 //	go test -c ./
-//	perf stat ./bbhash.test -test.run=none -test.bench=NewBBHash -test.timeout=0 -test.count=1
+//	perf stat ./bbhash.test -test.run=none -test.bench=BBHashNew -test.timeout=0 -test.count=1
 //
 // Note that the perf command requires that you have disabled the perf_event_paranoid setting:
 //
 //	sudo sysctl -w kernel.perf_event_paranoid=0
-func BenchmarkNewBBHash(b *testing.B) {
+func BenchmarkBBHashNew(b *testing.B) {
 	sizes := []int{
 		1000,
 		10_000,
 		100_000,
 		1_000_000,
-		10_000_000,
-		100_000_000,
-		1_000_000_000,
+		// 10_000_000,
+		// 100_000_000,
+		// 1_000_000_000,
 	}
-	gammaValues := []float64{
-		1.5,
-		2.0,
-	}
-	partitionSizes := []int{8, 16, 24, 32, 48, 64, 128}
-	tests := []variant[*bbhash.BBHash]{
-		{name: "Sequential", fn: bbhash.NewSequential},
-		{name: "Parallel", fn: bbhash.NewParallel},
-	}
-	tests2 := []variant[*bbhash.BBHash2]{
-		{name: "Parallel2", fn2: bbhash.NewParallel2},
-	}
+	gammaValues := []float64{1.5, 2.0}
+	partitionValues := []int{1, 8, 16, 24, 32, 48, 64, 128}
 	for _, size := range sizes {
 		keys := generateKeys(size, 99)
-		for _, tt := range tests {
-			for _, gamma := range gammaValues {
-				bb, _ := tt.fn(2.0, keys)
-				lvls := bb.Levels()
-				b.Run(fmt.Sprintf("name=%s/gamma=%.1f/bpk=%.2f/Levels=%d/keys=%d", tt.name, gamma, bb.BitsPerKey(), lvls, size), func(b *testing.B) {
+		for _, gamma := range gammaValues {
+			for _, partitions := range partitionValues {
+				b.Run(fmt.Sprintf("gamma=%.1f/partitions=%3d/keys=%d", gamma, partitions, size), func(b *testing.B) {
+					// Note: when partitions is 1, New invokes NewSequential indirectly.
+					// This might be slightly slower than using NewSequential directly.
+					bb, _ := bbhash.New(gamma, partitions, keys)
+					bpk := bb.BitsPerKey()
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
-						bbSink, _ = tt.fn(2.0, keys)
+						bb, _ = bbhash.New(gamma, partitions, keys)
 					}
+					// This metric is always the same for a given set of keys.
+					b.ReportMetric(bpk, "bits/key")
 				})
-			}
-		}
-		for _, tt := range tests2 {
-			for _, gamma := range gammaValues {
-				for _, partitionSize := range partitionSizes {
-					bb, _ := tt.fn2(gamma, partitionSize, keys)
-					max, min := bb.MaxMinLevels()
-					b.Run(fmt.Sprintf("name=%s/gamma=%.1f/bpk=%.2f/Levels=%d,%d/PartitionSize=%d/keys=%d", tt.name, gamma, bb.BitsPerKey(), max, min, partitionSize, size), func(b *testing.B) {
-						b.ResetTimer()
-						for i := 0; i < b.N; i++ {
-							bbSink, _ = tt.fn2(gamma, partitionSize, keys)
-						}
-					})
-				}
 			}
 		}
 	}
 }
 
-func BenchmarkFind(b *testing.B) {
+func BenchmarkBBHashFind(b *testing.B) {
 	sizes := []int{
 		1000,
 		10_000,
 		100_000,
 		1_000_000,
-		10_000_000,
-		100_000_000,
-		1_000_000_000,
+		// 10_000_000,
+		// 100_000_000,
+		// 1_000_000_000,
 	}
-	gammaValues := []float64{
-		1.5,
-		2.0,
-	}
-	partitionSizes := []int{8, 16, 24, 32, 48, 64, 128}
-	tests := []variant[*bbhash.BBHash]{
-		{name: "Sequential", fn: bbhash.NewSequential},
-		{name: "Parallel", fn: bbhash.NewParallel},
-	}
-	tests2 := []variant[*bbhash.BBHash2]{
-		{name: "Parallel2", fn2: bbhash.NewParallel2},
-	}
-
+	gammaValues := []float64{1.5, 2.0}
+	partitionValues := []int{1, 8, 16, 24, 32, 48, 64, 128}
 	for _, size := range sizes {
 		keys := generateKeys(size, 99)
-		for _, tt := range tests {
-			for _, gamma := range gammaValues {
-				bb, err := tt.fn(gamma, keys)
-				if err != nil {
-					b.Fatal(err)
-				}
-				b.Run(fmt.Sprintf("name=%s/gamma=%.1f/keys=%d", tt.name, gamma, size), func(b *testing.B) {
+		for _, gamma := range gammaValues {
+			for _, partitions := range partitionValues {
+				b.Run(fmt.Sprintf("gamma=%.1f/partitions=%3d/keys=%d", gamma, partitions, size), func(b *testing.B) {
+					bb, _ := bbhash.New(gamma, partitions, keys)
+					bpk := bb.BitsPerKey()
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
 						for _, k := range keys {
@@ -286,25 +251,9 @@ func BenchmarkFind(b *testing.B) {
 							}
 						}
 					}
+					// This metric is always the same for a given set of keys.
+					b.ReportMetric(bpk, "bits/key")
 				})
-			}
-		}
-		for _, tt := range tests2 {
-			for _, gamma := range gammaValues {
-				for _, partitionSize := range partitionSizes {
-					bb, _ := tt.fn2(gamma, partitionSize, keys)
-					max, min := bb.MaxMinLevels()
-					b.Run(fmt.Sprintf("name=%s/gamma=%.1f/bpk=%.2f/Levels=%d,%d/PartitionSize=%d/keys=%d", tt.name, gamma, bb.BitsPerKey(), max, min, partitionSize, size), func(b *testing.B) {
-						b.ResetTimer()
-						for i := 0; i < b.N; i++ {
-							for _, k := range keys {
-								if bb.Find(k) == 0 {
-									b.Fatalf("can't find the key: %#x", k)
-								}
-							}
-						}
-					})
-				}
 			}
 		}
 	}
