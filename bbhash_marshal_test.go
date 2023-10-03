@@ -1,6 +1,7 @@
 package bbhash_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/relab/bbhash"
@@ -36,6 +37,81 @@ func TestMarshalUnmarshalBBHash(t *testing.T) {
 		hashIndex := newBB.Find(key)
 		if hashIndex != originalHashIndexes[key] {
 			t.Fatalf("newBB.Find(%d) = %d, want %d", key, hashIndex, originalHashIndexes[key])
+		}
+	}
+}
+
+// Run with:
+// go test -run x -bench BenchmarkMarshalBinaryBBHash -benchmem
+func BenchmarkMarshalBinaryBBHash(b *testing.B) {
+	sizes := []int{
+		1000,
+		10_000,
+		100_000,
+		1_000_000,
+	}
+	gammaValues := []float64{1.5, 2.0}
+	for _, size := range sizes {
+		keys := generateKeys(size, 99)
+		for _, gamma := range gammaValues {
+			b.Run(fmt.Sprintf("gamma=%.1f/keys=%d", gamma, size), func(b *testing.B) {
+				bb, _ := bbhash.NewSequential(gamma, keys)
+				bpk := bb.BitsPerKey()
+				dataLen := 0
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					d, err := bb.MarshalBinary()
+					if err != nil {
+						b.Fatalf("Failed to marshal BBHash: %v", err)
+					}
+					dataLen += len(d)
+				}
+				// This metric is always the same for a given set of keys.
+				b.ReportMetric(bpk, "bits/key")
+				// This metric correspond to bits/key: dataLen*8/len(keys)
+				b.ReportMetric(float64(dataLen)/float64(b.N), "bytes/msg")
+			})
+		}
+	}
+}
+
+// Run with:
+// go test -run x -bench BenchmarkUnmarshalBinaryBBHash -benchmem
+func BenchmarkUnmarshalBinaryBBHash(b *testing.B) {
+	sizes := []int{
+		1000,
+		10_000,
+		100_000,
+		1_000_000,
+	}
+	gammaValues := []float64{1.5, 2.0}
+	for _, size := range sizes {
+		keys := generateKeys(size, 99)
+		for _, gamma := range gammaValues {
+			b.Run(fmt.Sprintf("gamma=%.1f/keys=%d", gamma, size), func(b *testing.B) {
+				bb, _ := bbhash.NewSequential(gamma, keys)
+				bpk := bb.BitsPerKey()
+				d, err := bb.MarshalBinary()
+				if err != nil {
+					b.Fatalf("Failed to marshal BBHash: %v", err)
+				}
+				dataLen := len(d)
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					newBB := &bbhash.BBHash{}
+					if err = newBB.UnmarshalBinary(d); err != nil {
+						b.Fatalf("Failed to unmarshal BBHash: %v", err)
+					}
+					newBpk := newBB.BitsPerKey()
+					if newBpk != bpk {
+						b.Fatalf("newBB.BitsPerKey() = %f, want %f", newBpk, bpk)
+					}
+				}
+				// This metric is always the same for a given set of keys.
+				b.ReportMetric(bpk, "bits/key")
+				// This metric correspond to bits/key: dataLen*8/len(keys)
+				b.ReportMetric(float64(dataLen), "bytes/msg")
+			})
 		}
 	}
 }
