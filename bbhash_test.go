@@ -172,8 +172,8 @@ func TestSlow(t *testing.T) {
 	}
 }
 
-func getKeymap(keys []uint64, bb *bbhash.BBHash) map[uint64]uint64 {
-	keyMap := make(map[uint64]uint64)
+func getKeymap(keys []uint64, bb *bbhash.BBHash) []uint64 {
+	keyMap := make([]uint64, len(keys)+1)
 	for _, key := range keys {
 		hashIndex := bb.Find(key)
 		keyMap[hashIndex] = key
@@ -190,7 +190,7 @@ func TestReverseMapping(t *testing.T) {
 		10_000,
 		100_000,
 		1_000_000,
-		//10_000_000,
+		// 10_000_000,
 		// 100_000_000,
 		// 1_000_000_000,
 	}
@@ -231,30 +231,41 @@ func BenchmarkReverseMapping(b *testing.B) {
 		10_000,
 		100_000,
 		1_000_000,
-		//10_000_000,
+		// 10_000_000,
 		// 100_000_000,
 		// 1_000_000_000,
 	}
 	for _, size := range sizes {
 		keys := generateKeys(size, 99)
 		b.Run(fmt.Sprintf("Get ReverseMap by calling .Find(). keys=%d", size), func(b *testing.B) {
-			bb, err := bbhash.NewSequential(2, keys)
-			if err != nil {
-				b.Error(err)
+			var err error
+			for i := 0; i < b.N; i++ {
+				bb, err = bbhash.NewSequential(2, keys)
+				if err != nil {
+					b.Error(err)
+				}
+				keymap = getKeymap(keys, bb)
+				// _ = keymap
 			}
-			keymap := getKeymap(keys, bb)
-			_ = keymap
 		})
 
 		b.Run(fmt.Sprintf("Get ReverseMap by calling NewSequentialWithKeymap keys=%d", size), func(b *testing.B) {
-			bb, newKeymap, err := bbhash.NewSequentialWithKeymap(2, keys)
-			if err != nil {
-				b.Error(err)
+			var err error
+			for i := 0; i < b.N; i++ {
+				bb, keymap, err = bbhash.NewSequentialWithKeymap(2, keys)
+				if err != nil {
+					b.Error(err)
+				}
+				// _, _ = bb, newKeymap
 			}
-			_, _ = bb, newKeymap
 		})
 	}
 }
+
+var (
+	keymap []uint64
+	bb     *bbhash.BBHash
+)
 
 // BenchmarkBBHashNew benchmarks the construction of a new BBHash using
 // sequential and parallel variants. This will take a long time to run,
