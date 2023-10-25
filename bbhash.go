@@ -129,12 +129,7 @@ func (bb *BBHash) compute(gamma float64, keys []uint64) error {
 	return nil
 }
 
-type positionLvl struct {
-	position uint64
-	key      uint64
-}
-
-// computeWithKeymap is simpilar to compute(), but in addition returns the reverse keymap.
+// computeWithKeymap is similar to compute(), but in addition returns the reverse keymap.
 func (bb *BBHash) computeWithKeymap(gamma float64, keys []uint64) ([]uint64, error) {
 	sz := len(keys)
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
