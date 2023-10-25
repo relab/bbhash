@@ -30,8 +30,8 @@ func newBBHash() *BBHash {
 // The gamma parameter is the expansion factor for the bit vector; the paper recommends
 // a value of 2.0. The larger the value the more memory will be consumed by the BBHash.
 func NewSequential(gamma float64, keys []uint64) (*BBHash, error) {
-	if gamma <= 1.0 {
-		gamma = 2.0
+	if gamma < 1.0 {
+		gamma = 1.0
 	}
 	bb := newBBHash()
 	if err := bb.compute(gamma, keys); err != nil {
@@ -64,6 +64,10 @@ func (bb *BBHash) Find(key uint64) uint64 {
 // compute computes the minimal perfect hash for the given keys.
 func (bb *BBHash) compute(gamma float64, keys []uint64) error {
 	sz := len(keys)
+	if sz == 0 {
+		return fmt.Errorf("bbhash: compute: no keys")
+	}
+
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
 	// bit vectors for current level : A and C in the paper
 	lvlVector := newBCVector(words(sz, gamma))
