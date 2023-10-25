@@ -1,7 +1,10 @@
 // Package bbhash implements the BBHash algorithm for minimal perfect hash functions.
 package bbhash
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 const (
 	// Heuristic: 32 levels should be enough for even very large key sets
@@ -38,6 +41,19 @@ func NewSequential(gamma float64, keys []uint64) (*BBHash, error) {
 		return nil, err
 	}
 	return bb, nil
+}
+
+// NewSequentialWithKeymap is similar to NewSequential, but in addition returns the reverse map.
+func NewSequentialWithKeymap(gamma float64, keys []uint64) (*BBHash, map[uint64]uint64, error) {
+	if gamma <= 1.0 {
+		gamma = 2.0
+	}
+	bb := newBBHash()
+	keymap, err := bb.computeWithKeymap(gamma, keys)
+	if err != nil {
+		return nil, nil, err
+	}
+	return bb, keymap, nil
 }
 
 // Find returns a unique index representing the key in the minimal hash set.
@@ -112,6 +128,82 @@ func (bb *BBHash) compute(gamma float64, keys []uint64) error {
 	}
 	bb.computeLevelRanks()
 	return nil
+}
+
+type positionLvl struct {
+	position uint64
+	key      uint64
+}
+
+// computeWithKeymap is simpilar to compute(), but in addition returns the reverse keymap.
+func (bb *BBHash) computeWithKeymap(gamma float64, keys []uint64) (map[uint64]uint64, error) {
+	sz := len(keys)
+	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
+	// bit vectors for current level : A and C in the paper
+	lvlVector := newBCVector(words(sz, gamma))
+	reversemap := make(map[uint64]uint64)
+	tmpReversemap := make(map[int][]positionLvl)
+	// loop exits when there are no more keys to re-hash (see break statement below)
+	for lvl := 0; true; lvl++ {
+		// precompute the level hash to speed up the key hashing
+		lvlHash := levelHash(uint64(lvl))
+
+		// find colliding keys and possible bit vector positions for non-colliding keys
+		for _, k := range keys {
+			h := keyHash(lvlHash, k)
+			// update the bit and collision vectors for the current level
+			lvlVector.update(h)
+		}
+
+		// remove bit vector position assignments for colliding keys and add them to the redo set
+		for _, k := range keys {
+			h := keyHash(lvlHash, k)
+			// unset the bit vector position for the current key if it collided
+			if lvlVector.unsetCollision(h) {
+				// keys to re-hash at next level : F in the paper
+				redo = append(redo, k)
+			} else {
+				x := (h % lvlVector.size())
+				if tmpReversemap[lvl] == nil {
+					tmpReversemap[lvl] = make([]positionLvl, 0)
+				}
+				tmpReversemap[lvl] = append(tmpReversemap[lvl], positionLvl{position: x, key: k})
+			}
+		}
+
+		// save the current bit vector for the current level
+		bb.bits = append(bb.bits, lvlVector.bitVector())
+
+		sz = len(redo)
+		if sz == 0 {
+			break
+		}
+		// move to next level and compute the set of keys to re-hash (that had collisions)
+		keys = redo
+		redo = redo[:0]
+		lvlVector.nextLevel(words(sz, gamma))
+
+		if lvl > maxLevel {
+			return nil, fmt.Errorf("can't find minimal perfect hash after %d tries", lvl)
+		}
+	}
+	bb.computeLevelRanks()
+
+	// Compute the reverse map
+	tmpTmpReverse := make(map[uint64]uint64)
+	for i := 0; i < len(tmpReversemap); i++ {
+		sortedKeys := make([]uint64, 0)
+		posLvl := tmpReversemap[i]
+		for _, pos := range posLvl {
+			tmpTmpReverse[pos.position] = pos.key
+			sortedKeys = append(sortedKeys, pos.position)
+		}
+		sort.Slice(sortedKeys, func(i, j int) bool { return sortedKeys[i] < sortedKeys[j] })
+		for j := 0; j < len(sortedKeys); j++ {
+			reversemap[uint64(len(reversemap)+1)] = tmpTmpReverse[sortedKeys[j]]
+		}
+	}
+	return reversemap, nil
 }
 
 // computeLevelRanks computes the total rank of each level.
