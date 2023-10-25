@@ -172,6 +172,90 @@ func TestSlow(t *testing.T) {
 	}
 }
 
+func getKeymap(keys []uint64, bb *bbhash.BBHash) map[uint64]uint64 {
+	keyMap := make(map[uint64]uint64)
+	for _, key := range keys {
+		hashIndex := bb.Find(key)
+		keyMap[hashIndex] = key
+	}
+	return keyMap
+}
+
+// TestReverseMapping checks that the reverse map returned from NewSequentialWithKeymap is correct.
+// First it builds a reverse map the slow way, then it builds a reverse map the fast way.
+// Then it compares the two maps.
+func TestReverseMapping(t *testing.T) {
+	sizes := []int{
+		1000,
+		10_000,
+		100_000,
+		1_000_000,
+		//10_000_000,
+		// 100_000_000,
+		// 1_000_000_000,
+	}
+	for _, size := range sizes {
+		// 1) Build a reverse map the slow way.
+		keys := generateKeys(int(size), 99)
+		bb, err := bbhash.NewSequential(2, keys)
+		if err != nil {
+			t.Error(err)
+		}
+		keymap := getKeymap(keys, bb)
+
+		// 2) Build a reverse map the fast way..
+		_, newKeymap, err := bbhash.NewSequentialWithKeymap(2, keys)
+		if err != nil {
+			t.Error(err)
+		}
+
+		// 3) Compare that they match.
+		if len(newKeymap) != len(keymap) {
+			t.Errorf("Length of keymaps does not match. Expected: %d, Got: %d", len(keymap), len(newKeymap))
+		}
+		usize := uint64(size)
+		for i := uint64(1); i <= usize; i++ {
+			if newKeymap[i] != keymap[i] {
+				t.Errorf("Keymap does not match. Expected: %x, Got: %x, Index: %d", keymap[i]>>48, newKeymap[i]>>48, i)
+			}
+		}
+	}
+}
+
+// BenchmarkReverseMapping benchmarks the speed of building a reverse map.
+// First it builds a reverse map the slow way, then it builds a reverse map the fast way.
+// Running with more than 1_000_000 keys in the slow way takes a long time, consider running with -timeout=0
+func BenchmarkReverseMapping(b *testing.B) {
+	sizes := []int{
+		1000,
+		10_000,
+		100_000,
+		1_000_000,
+		//10_000_000,
+		// 100_000_000,
+		// 1_000_000_000,
+	}
+	for _, size := range sizes {
+		keys := generateKeys(size, 99)
+		b.Run(fmt.Sprintf("Get ReverseMap by calling .Find(). keys=%d", size), func(b *testing.B) {
+			bb, err := bbhash.NewSequential(2, keys)
+			if err != nil {
+				b.Error(err)
+			}
+			keymap := getKeymap(keys, bb)
+			_ = keymap
+		})
+
+		b.Run(fmt.Sprintf("Get ReverseMap by calling NewSequentialWithKeymap keys=%d", size), func(b *testing.B) {
+			bb, newKeymap, err := bbhash.NewSequentialWithKeymap(2, keys)
+			if err != nil {
+				b.Error(err)
+			}
+			_, _ = bb, newKeymap
+		})
+	}
+}
+
 // BenchmarkBBHashNew benchmarks the construction of a new BBHash using
 // sequential and parallel variants. This will take a long time to run,
 // especially if you enable large sizes. Thus, to avoid timeouts, you
