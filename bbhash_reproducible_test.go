@@ -23,10 +23,10 @@ func TestReproducibleBitVectors(t *testing.T) {
 		1000,
 	}
 	tests := []struct {
+		fn    func(gamma float64, keys []uint64) (*bbhash.BBHash, error)
 		name  string
 		gamma float64
 		seed  int
-		fn    func(gamma float64, keys []uint64) (*bbhash.BBHash, error)
 	}{
 		{name: "Sequential", gamma: 2.0, seed: 123, fn: bbhash.NewSequential},
 		{name: "Parallel__", gamma: 2.0, seed: 123, fn: bbhash.NewParallel},

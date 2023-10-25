@@ -14,9 +14,9 @@ import (
 type mphf interface{ Find(uint64) uint64 }
 
 type variant[T mphf] struct {
-	name string
 	fn   func(gamma float64, keys []uint64) (T, error)
 	fn2  func(gamma float64, partitions int, keys []uint64) (T, error)
+	name string
 }
 
 func runMPHFTest[T mphf](t *testing.T, tt variant[T], keys []uint64, gamma float64) {
