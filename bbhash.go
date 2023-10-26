@@ -43,16 +43,16 @@ func NewSequential(gamma float64, keys []uint64) (*BBHash, error) {
 }
 
 // NewSequentialWithKeymap is similar to NewSequential, but in addition returns the reverse map.
-func NewSequentialWithKeymap(gamma float64, keys []uint64) (*BBHash, []uint64, error) {
+func NewSequentialWithKeymap(gamma float64, keys []uint64, reverseFn func(uint64, uint64)) (*BBHash, error) {
 	if gamma <= 1.0 {
 		gamma = 2.0
 	}
 	bb := newBBHash()
-	keymap, err := bb.computeWithKeymap(gamma, keys)
+	err := bb.computeWithKeymap(gamma, keys, reverseFn)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return bb, keymap, nil
+	return bb, nil
 }
 
 // Find returns a unique index representing the key in the minimal hash set.
@@ -135,13 +135,18 @@ type positionLvl struct {
 }
 
 // computeWithKeymap is simpilar to compute(), but in addition returns the reverse keymap.
-func (bb *BBHash) computeWithKeymap(gamma float64, keys []uint64) ([]uint64, error) {
+func (bb *BBHash) computeWithKeymap(gamma float64, keys []uint64, reverseFn func(uint64, uint64)) error {
 	sz := len(keys)
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
 	// bit vectors for current level : A and C in the paper
 	lvlVector := newBCVector(words(sz, gamma))
-	reverseMap := make([]uint64, len(keys)+1)
-	levelKeysMap := make([][]uint64, initialLevels)
+	//var reverseMap []uint64
+	var levelKeysMap [][]uint64
+
+	if reverseFn != nil {
+		//reverseMap = make([]uint64, sz+1)
+		levelKeysMap = make([][]uint64, initialLevels)
+	}
 	// loop exits when there are no more keys to re-hash (see break statement below)
 	for lvl := 0; true; lvl++ {
 		// precompute the level hash to speed up the key hashing
@@ -162,13 +167,15 @@ func (bb *BBHash) computeWithKeymap(gamma float64, keys []uint64) ([]uint64, err
 			if lvlVector.unsetCollision(h) {
 				// keys to re-hash at next level : F in the paper
 				redo = append(redo, k)
-			} else {
+			} else if reverseFn != nil {
 				// keys for the current level used to construct the reverse map.
 				// keys are ordered by their bit vector position to avoid sorting later.
 				levelKeys[h%lvlVector.size()] = k
 			}
 		}
-		levelKeysMap[lvl] = levelKeys
+		if reverseFn != nil {
+			levelKeysMap[lvl] = levelKeys
+		}
 
 		// save the current bit vector for the current level
 		bb.bits = append(bb.bits, lvlVector.bitVector())
@@ -183,22 +190,26 @@ func (bb *BBHash) computeWithKeymap(gamma float64, keys []uint64) ([]uint64, err
 		lvlVector.nextLevel(words(sz, gamma))
 
 		if lvl > maxLevel {
-			return nil, fmt.Errorf("can't find minimal perfect hash after %d tries", lvl)
+			return fmt.Errorf("can't find minimal perfect hash after %d tries", lvl)
 		}
 	}
 	bb.computeLevelRanks()
 
-	// Compute the reverse map
-	index := 1
-	for _, levelKeys := range levelKeysMap {
-		for _, key := range levelKeys {
-			if key != 0 {
-				reverseMap[index] = key
-				index++
+	if reverseFn != nil {
+		// Compute the reverse map
+		index := uint64(1)
+		for _, levelKeys := range levelKeysMap {
+			for _, key := range levelKeys {
+				if key != 0 {
+					//reverseMap[index] = key
+					reverseFn(index, key)
+					index++
+				}
 			}
 		}
 	}
-	return reverseMap, nil
+
+	return nil
 }
 
 // computeLevelRanks computes the total rank of each level.

@@ -204,7 +204,11 @@ func TestReverseMapping(t *testing.T) {
 		keymap := getKeymap(keys, bb)
 
 		// 2) Build a reverse map the fast way..
-		_, newKeymap, err := bbhash.NewSequentialWithKeymap(2, keys)
+		newKeymap := make([]uint64, len(keys)+1)
+		makeRevMap := func(index, key uint64) {
+			newKeymap[index] = key
+		}
+		_, err = bbhash.NewSequentialWithKeymap(2, keys, makeRevMap)
 		if err != nil {
 			t.Error(err)
 		}
@@ -251,8 +255,13 @@ func BenchmarkReverseMapping(b *testing.B) {
 
 		b.Run(fmt.Sprintf("Get ReverseMap by calling NewSequentialWithKeymap keys=%d", size), func(b *testing.B) {
 			var err error
+			revMap := make([]uint64, len(keys)+1)
+			_ = revMap
+			makeRevMap := func(index, key uint64) {
+				revMap[index] = key
+			}
 			for i := 0; i < b.N; i++ {
-				bb, keymap, err = bbhash.NewSequentialWithKeymap(2, keys)
+				bb, err = bbhash.NewSequentialWithKeymap(2, keys, makeRevMap)
 				if err != nil {
 					b.Error(err)
 				}
