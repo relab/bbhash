@@ -2,6 +2,7 @@ package bbhash
 
 import (
 	"fmt"
+	"os"
 	"testing"
 )
 
@@ -23,6 +24,9 @@ func TestFastHash(t *testing.T) {
 var sink uint64
 
 func BenchmarkHashLevel(b *testing.B) {
+	if os.Getenv("HASH") == "" {
+		b.Skip("Skipping benchmark, set HASH=1 to run it.")
+	}
 	for lvl := uint64(0); lvl < 5; lvl++ {
 		lvlHash := levelHash(lvl)
 		b.Run(fmt.Sprintf("lvl=%d", lvl), func(b *testing.B) {
@@ -34,6 +38,9 @@ func BenchmarkHashLevel(b *testing.B) {
 }
 
 func BenchmarkHashFull(b *testing.B) {
+	if os.Getenv("HASH") == "" {
+		b.Skip("Skipping benchmark, set HASH=1 to run it.")
+	}
 	for lvl := uint64(0); lvl < 5; lvl++ {
 		b.Run(fmt.Sprintf("lvl=%d", lvl), func(b *testing.B) {
 			for key := 0; key < b.N; key++ {

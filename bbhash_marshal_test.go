@@ -44,14 +44,7 @@ func TestMarshalUnmarshalBBHash(t *testing.T) {
 // Run with:
 // go test -run x -bench BenchmarkMarshalBinaryBBHash -benchmem
 func BenchmarkMarshalBinaryBBHash(b *testing.B) {
-	sizes := []int{
-		1000,
-		10_000,
-		100_000,
-		1_000_000,
-	}
-	gammaValues := []float64{1.5, 2.0}
-	for _, size := range sizes {
+	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
 			b.Run(fmt.Sprintf("gamma=%.1f/keys=%d", gamma, size), func(b *testing.B) {
@@ -59,7 +52,7 @@ func BenchmarkMarshalBinaryBBHash(b *testing.B) {
 				bpk := bb.BitsPerKey()
 				dataLen := 0
 				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for range b.N {
 					d, err := bb.MarshalBinary()
 					if err != nil {
 						b.Fatalf("Failed to marshal BBHash: %v", err)
@@ -78,14 +71,7 @@ func BenchmarkMarshalBinaryBBHash(b *testing.B) {
 // Run with:
 // go test -run x -bench BenchmarkUnmarshalBinaryBBHash -benchmem
 func BenchmarkUnmarshalBinaryBBHash(b *testing.B) {
-	sizes := []int{
-		1000,
-		10_000,
-		100_000,
-		1_000_000,
-	}
-	gammaValues := []float64{1.5, 2.0}
-	for _, size := range sizes {
+	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
 			b.Run(fmt.Sprintf("gamma=%.1f/keys=%d", gamma, size), func(b *testing.B) {
@@ -97,7 +83,7 @@ func BenchmarkUnmarshalBinaryBBHash(b *testing.B) {
 				}
 				dataLen := len(d)
 				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for range b.N {
 					newBB := &bbhash.BBHash{}
 					if err = newBB.UnmarshalBinary(d); err != nil {
 						b.Fatalf("Failed to unmarshal BBHash: %v", err)

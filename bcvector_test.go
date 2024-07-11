@@ -2,6 +2,7 @@ package bbhash
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"testing"
 )
@@ -9,6 +10,10 @@ import (
 var vsink *bcVector
 
 func BenchmarkBCVectorZero(b *testing.B) {
+	if os.Getenv("ZERO_VECTOR") == "" {
+		b.Skip("Skipping benchmark, set ZERO_VECTOR=1 to run it.")
+	}
+
 	sizes := []uint64{
 		1000,
 		10_000,
@@ -22,14 +27,14 @@ func BenchmarkBCVectorZero(b *testing.B) {
 		vsink = newBCVector(size)
 		b.Run(fmt.Sprintf("combined_zero/size=%d", size), func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				vsink.combined_zero()
 			}
 		})
 		runtime.GC()
 		b.Run(fmt.Sprintf("separate_zero/size=%d", size), func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				vsink.separate_zero()
 			}
 		})
@@ -38,7 +43,7 @@ func BenchmarkBCVectorZero(b *testing.B) {
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("new_alloc_vec/size=%d", size), func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				vsink = newBCVector(size)
 			}
 		})

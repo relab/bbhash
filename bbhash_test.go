@@ -1,14 +1,88 @@
 package bbhash_test
 
 import (
+	"flag"
 	"fmt"
 	"hash/fnv"
 	"math/rand"
+	"os"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/relab/bbhash"
 )
+
+// Default benchmark parameters.
+var (
+	keySizes        = []int{1000, 10_000, 100_000, 1_000_000}
+	longKeySizes    = []int{10_000_000, 100_000_000, 1_000_000_000}
+	partitionValues = []int{1, 4, 8, 16, 24, 32, 48, 64, 128}
+	gammaValues     = []float64{1.0, 1.5, 2.0}
+)
+
+// TestMain parses command-line flags to set the key sizes, partition values, and gamma values.
+//
+// To run all main benchmarks:
+//
+//	go test -run x -bench Benchmark -benchmem -timeout=0 -gamma=1,1.5,2 -partitions=1,2,4,8 -keys=1000,10000
+//	go test -run x -bench Benchmark -benchmem -timeout=0 -gamma=1,1.5,2 -partitions=1,2,4,8 -keys=long
+//
+// To run specific benchmarks:
+//
+//	go test -run x -bench BenchmarkBBHashNew -benchmem -timeout=0 -count 2 -gamma=1.5,2 -partitions=1,2,4,8 -keys=1000,10000
+//	go test -run x -bench BenchmarkBBhashFind -benchmem -timeout=0 -count 2 -gamma=1.5,2 -partitions=1,2,4,8 -keys=1000,10000
+//	go test -run x -bench BenchmarkReverseMapping -benchmem -timeout=0 -count 2 -gamma=1.5,2 -keys=long
+func TestMain(m *testing.M) {
+	var (
+		keySizesSlice  = flag.String("keys", "", `list of number of keys to generate (use "long" for 10M, 100M, 1B)`)
+		partitionSlice = flag.String("partitions", "", `list of partitions to use (e.g., "{1, 4, 8, 16}")`)
+		gammaSlice     = flag.String("gamma", "", `list of gamma values to use (e.g., "{1.0, 1.5, 2.0}")`)
+	)
+	flag.Parse()
+
+	var err error
+	if *keySizesSlice != "" {
+		switch *keySizesSlice {
+		case "long":
+			keySizes = longKeySizes
+		default:
+			keySizes, err = parseSlice[int](*keySizesSlice)
+			check(err)
+		}
+	}
+	if *partitionSlice != "" {
+		partitionValues, err = parseSlice[int](*partitionSlice)
+		check(err)
+	}
+	if *gammaSlice != "" {
+		gammaValues, err = parseSlice[float64](*gammaSlice)
+		check(err)
+	}
+
+	for _, size := range keySizes {
+		if size >= 5_000_000 && hasTimeout() {
+			fmt.Println("Key sizes larger than 5M may cause the test to time out; use the -timeout=0 flag to run longer than 10 minutes")
+			os.Exit(1)
+		}
+	}
+	os.Exit(m.Run())
+}
+
+// hasTimeout returns true if the test has specified a timeout other than 0.
+// This is used to decide whether to run the slow benchmarks or not.
+func hasTimeout() bool {
+	hasTimeout := true
+	flag.VisitAll(func(f *flag.Flag) {
+		if f.Name == "test.timeout" {
+			if f.Value.String() == "0s" {
+				hasTimeout = false
+			}
+		}
+	})
+	return hasTimeout
+}
 
 // This is only meant for testing, and should not be used for benchmarking.
 type mphf interface{ Find(uint64) uint64 }
@@ -190,12 +264,9 @@ func TestReverseMapping(t *testing.T) {
 		10_000,
 		100_000,
 		1_000_000,
-		// 10_000_000,
-		// 100_000_000,
-		// 1_000_000_000,
 	}
 	for _, size := range sizes {
-		// 1) Build a reverse map the slow way.
+		// Build a reverse map with NewSequential+Find.
 		keys := generateKeys(int(size), 99)
 		bb, err := bbhash.NewSequential(2, keys)
 		if err != nil {
@@ -203,13 +274,13 @@ func TestReverseMapping(t *testing.T) {
 		}
 		keymap := getKeymap(keys, bb)
 
-		// 2) Build a reverse map the fast way..
+		// Build a reverse map with NewSequentialWithKeymap.
 		_, newKeymap, err := bbhash.NewSequentialWithKeymap(2, keys)
 		if err != nil {
 			t.Error(err)
 		}
 
-		// 3) Compare that they match.
+		// Check that the two keymaps are equal.
 		if len(newKeymap) != len(keymap) {
 			t.Errorf("Length of keymaps does not match. Expected: %d, Got: %d", len(keymap), len(newKeymap))
 		}
@@ -223,42 +294,31 @@ func TestReverseMapping(t *testing.T) {
 }
 
 // BenchmarkReverseMapping benchmarks the speed of building a reverse map.
-// First it builds a reverse map the slow way, then it builds a reverse map the fast way.
-// Running with more than 1_000_000 keys in the slow way takes a long time, consider running with -timeout=0
+// The original implementation using NewSequential+Find is very slow;
+// with 10_000_000 keys it takes more than 13 hours on a Mac Studio M2 Max 64GB.
+// The NewSequentialWithKeymap with 1_000_000_000 keys takes less than 6 minutes.
+//
+//	go test -run x -bench BenchmarkReverseMapping -benchmem -timeout=0 -count 1 > reverse.txt
 func BenchmarkReverseMapping(b *testing.B) {
-	sizes := []int{
-		1000,
-		10_000,
-		100_000,
-		1_000_000,
-		// 10_000_000,
-		// 100_000_000,
-		// 1_000_000_000,
-	}
-	for _, size := range sizes {
+	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
-		b.Run(fmt.Sprintf("Get ReverseMap by calling .Find(). keys=%d", size), func(b *testing.B) {
-			var err error
-			for i := 0; i < b.N; i++ {
-				bb, err = bbhash.NewSequential(2, keys)
-				if err != nil {
-					b.Error(err)
+		for _, gamma := range gammaValues {
+			b.Run(fmt.Sprintf("NewSequentialWithKeymap/gamma=%.1f/keys=%d", gamma, size), func(b *testing.B) {
+				for range b.N {
+					bb, keymap, _ = bbhash.NewSequentialWithKeymap(gamma, keys)
 				}
-				keymap = getKeymap(keys, bb)
-				// _ = keymap
-			}
-		})
+			})
 
-		b.Run(fmt.Sprintf("Get ReverseMap by calling NewSequentialWithKeymap keys=%d", size), func(b *testing.B) {
-			var err error
-			for i := 0; i < b.N; i++ {
-				bb, keymap, err = bbhash.NewSequentialWithKeymap(2, keys)
-				if err != nil {
-					b.Error(err)
-				}
-				// _, _ = bb, newKeymap
+			if size > 1_000_000 {
+				continue // Skip the NewSequential+Find benchmark for large sizes; it's too slow.
 			}
-		})
+			b.Run(fmt.Sprintf("NewSequential+Find/gamma=%.1f/keys=%d", gamma, size), func(b *testing.B) {
+				for range b.N {
+					bb, _ = bbhash.NewSequential(gamma, keys)
+					keymap = getKeymap(keys, bb)
+				}
+			})
+		}
 	}
 }
 
@@ -287,18 +347,7 @@ var (
 //
 //	sudo sysctl -w kernel.perf_event_paranoid=0
 func BenchmarkBBHashNew(b *testing.B) {
-	sizes := []int{
-		1000,
-		10_000,
-		100_000,
-		1_000_000,
-		// 10_000_000,
-		// 100_000_000,
-		// 1_000_000_000,
-	}
-	gammaValues := []float64{1.5, 2.0}
-	partitionValues := []int{1, 8, 16, 24, 32, 48, 64, 128}
-	for _, size := range sizes {
+	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
 			for _, partitions := range partitionValues {
@@ -308,7 +357,7 @@ func BenchmarkBBHashNew(b *testing.B) {
 					bb, _ := bbhash.New(gamma, partitions, keys)
 					bpk := bb.BitsPerKey()
 					b.ResetTimer()
-					for i := 0; i < b.N; i++ {
+					for range b.N {
 						bb, _ = bbhash.New(gamma, partitions, keys)
 					}
 					// This metric is always the same for a given set of keys.
@@ -320,18 +369,7 @@ func BenchmarkBBHashNew(b *testing.B) {
 }
 
 func BenchmarkBBHashFind(b *testing.B) {
-	sizes := []int{
-		1000,
-		10_000,
-		100_000,
-		1_000_000,
-		// 10_000_000,
-		// 100_000_000,
-		// 1_000_000_000,
-	}
-	gammaValues := []float64{1.5, 2.0}
-	partitionValues := []int{1, 8, 16, 24, 32, 48, 64, 128}
-	for _, size := range sizes {
+	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
 			for _, partitions := range partitionValues {
@@ -339,7 +377,7 @@ func BenchmarkBBHashFind(b *testing.B) {
 					bb, _ := bbhash.New(gamma, partitions, keys)
 					bpk := bb.BitsPerKey()
 					b.ResetTimer()
-					for i := 0; i < b.N; i++ {
+					for range b.N {
 						for _, k := range keys {
 							if bb.Find(k) == 0 {
 								b.Fatalf("can't find the key: %#x", k)
@@ -352,6 +390,57 @@ func BenchmarkBBHashFind(b *testing.B) {
 			}
 		}
 	}
+}
+
+func check(err error) {
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+// parseSlice parses a slice of numbers from a string.
+// The input string may be formatted as (with or without spaces):
+//   - []int{1, 2, 3}
+//   - {1, 2, 3}
+//   - [1, 2, 3]
+//   - 1, 2, 3
+//   - 1.0, 1.5, 2.0
+//   - 1000, 100_000, 200_000
+func parseSlice[T float64 | int](s string) ([]T, error) {
+	slice := make([]T, 0)
+	s = strings.TrimPrefix(s, "[]float64")
+	s = strings.TrimPrefix(s, "[]float")
+	s = strings.TrimPrefix(s, "[]int64")
+	s = strings.TrimPrefix(s, "[]int")
+	s = strings.TrimPrefix(s, "{")
+	s = strings.TrimSuffix(s, "}")
+	s = strings.TrimPrefix(s, "[")
+	s = strings.TrimSuffix(s, "]")
+	for _, k := range strings.Split(s, ",") {
+		k = strings.TrimSpace(k)
+		if k == "" {
+			continue
+		}
+		k = strings.ReplaceAll(k, "_", "")
+		var i T
+		switch any(i).(type) {
+		case float64:
+			v, err := strconv.ParseFloat(k, 64)
+			if err != nil {
+				return nil, err
+			}
+			i = T(v)
+		case int:
+			v, err := strconv.Atoi(k)
+			if err != nil {
+				return nil, err
+			}
+			i = T(v)
+		}
+		slice = append(slice, i)
+	}
+	return slice, nil
 }
 
 func checkKey(t *testing.T, keyIndex int, key, entries, hashIndex uint64) {

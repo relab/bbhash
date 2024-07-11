@@ -20,6 +20,8 @@ Herle's
 Hutt
 Jabba
 Kenobi
+Keymap
+keymaps
 Leia
 Limasset
 lvls
@@ -38,4 +40,5 @@ struct
 Sudhi
 Unmarshal
 unmarshalled
+usize
 vsink
