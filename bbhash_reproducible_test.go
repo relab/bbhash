@@ -88,13 +88,6 @@ func diff(a, b [][]uint64) string {
 	return s.String()
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 var bitVectors1000 = [][]uint64{
 	// Level 0:
 	{
