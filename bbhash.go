@@ -144,7 +144,7 @@ func (bb *BBHash) computeWithKeymap(gamma float64, keys []uint64) error {
 	// bit vectors for current level : A and C in the paper
 	lvlVector := newBCVector(words(sz, gamma))
 	bb.reverseMap = make([]uint64, len(keys)+1)
-	levelKeysMap := make([][]uint64, initialLevels)
+	levelKeysMap := make([][]uint64, 0, initialLevels)
 	// loop exits when there are no more keys to re-hash (see break statement below)
 	for lvl := 0; true; lvl++ {
 		// precompute the level hash to speed up the key hashing
@@ -171,7 +171,7 @@ func (bb *BBHash) computeWithKeymap(gamma float64, keys []uint64) error {
 				levelKeys[h%lvlVector.size()] = k
 			}
 		}
-		levelKeysMap[lvl] = levelKeys
+		levelKeysMap = append(levelKeysMap, levelKeys)
 
 		// save the current bit vector for the current level
 		bb.bits = append(bb.bits, lvlVector.bitVector())

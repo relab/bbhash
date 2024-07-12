@@ -267,7 +267,7 @@ func TestReverseMapping(t *testing.T) {
 	}
 	for _, size := range sizes {
 		keys := generateKeys(int(size), 99)
-		for _, gamma := range []float64{1.1, 1.5, 2.0} {
+		for _, gamma := range []float64{0.5, 1.1, 1.5, 2.0} {
 			t.Run(fmt.Sprintf("gamma=%.1f/keys=%d", gamma, size), func(t *testing.T) {
 				// Build a reverse map with NewSequential+Find.
 				bb, err := bbhash.NewSequential(gamma, keys)
