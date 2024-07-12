@@ -259,36 +259,54 @@ func getKeymap(keys []uint64, bb *bbhash.BBHash) []uint64 {
 // First it builds a reverse map the slow way, then it builds a reverse map the fast way.
 // Then it compares the two maps.
 func TestReverseMapping(t *testing.T) {
-	sizes := []int{
+	sizes := []uint64{
 		1000,
 		10_000,
 		100_000,
 		1_000_000,
 	}
 	for _, size := range sizes {
-		// Build a reverse map with NewSequential+Find.
 		keys := generateKeys(int(size), 99)
-		bb, err := bbhash.NewSequential(2, keys)
-		if err != nil {
-			t.Error(err)
-		}
-		keymap := getKeymap(keys, bb)
+		for _, gamma := range []float64{1.1, 1.5, 2.0} {
+			t.Run(fmt.Sprintf("gamma=%.1f/keys=%d", gamma, size), func(t *testing.T) {
+				// Build a reverse map with NewSequential+Find.
+				bb, err := bbhash.NewSequential(gamma, keys)
+				if err != nil {
+					t.Error(err)
+				}
+				keymap := getKeymap(keys, bb)
 
-		// Build a reverse map with NewSequentialWithKeymap.
-		_, newKeymap, err := bbhash.NewSequentialWithKeymap(2, keys)
-		if err != nil {
-			t.Error(err)
-		}
+				// Build a reverse map with NewSequentialWithKeymap.
+				bm, err := bbhash.NewSequentialWithKeymap(gamma, keys)
+				if err != nil {
+					t.Error(err)
+				}
 
-		// Check that the two keymaps are equal.
-		if len(newKeymap) != len(keymap) {
-			t.Errorf("Length of keymaps does not match. Expected: %d, Got: %d", len(keymap), len(newKeymap))
-		}
-		usize := uint64(size)
-		for i := uint64(1); i <= usize; i++ {
-			if newKeymap[i] != keymap[i] {
-				t.Errorf("Keymap does not match. Expected: %x, Got: %x, Index: %d", keymap[i]>>48, newKeymap[i]>>48, i)
-			}
+				// Check that the two keymaps are equal.
+				for i := range size {
+					if bm.Key(i) != keymap[i] {
+						// Show only the high 16 bits of the key.
+						t.Errorf("bm.Key(%d) = %x, want %x", i, bm.Key(i)>>48, keymap[i]>>48)
+					}
+				}
+
+				// Check that Key() returns the correct key for the boundary indices.
+				tests := []struct {
+					index    uint64
+					wantZero bool
+				}{
+					{0, true},
+					{1, false},
+					{size - 1, false},
+					{size, false},
+					{size + 1, true},
+				}
+				for _, test := range tests {
+					if got := bm.Key(test.index); (got == 0) != test.wantZero {
+						t.Errorf("bm.Key(%d) = %x, want %v", test.index, got>>48, test.wantZero)
+					}
+				}
+			})
 		}
 	}
 }
@@ -305,7 +323,7 @@ func BenchmarkReverseMapping(b *testing.B) {
 		for _, gamma := range gammaValues {
 			b.Run(fmt.Sprintf("NewSequentialWithKeymap/gamma=%.1f/keys=%d", gamma, size), func(b *testing.B) {
 				for range b.N {
-					bb, keymap, _ = bbhash.NewSequentialWithKeymap(gamma, keys)
+					bb, _ = bbhash.NewSequentialWithKeymap(gamma, keys)
 				}
 			})
 
