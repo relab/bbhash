@@ -11,9 +11,7 @@ import (
 // The gamma parameter is the expansion factor for the bit vector; the paper recommends
 // a value of 2.0. The larger the value the more memory will be consumed by the BBHash.
 func NewParallel(gamma float64, keys []uint64) (*BBHash, error) {
-	if gamma <= 1.0 {
-		gamma = 2.0
-	}
+	gamma = max(gamma, minimalGamma)
 	bb := newBBHash()
 	if err := bb.computeParallel(gamma, keys); err != nil {
 		return nil, err

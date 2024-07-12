@@ -6,6 +6,8 @@ import (
 )
 
 const (
+	// minimalGamma is the smallest allowed expansion factor for the bit vector.
+	minimalGamma = 1.0
 	// Heuristic: 32 levels should be enough for even very large key sets
 	initialLevels = 32
 
@@ -32,9 +34,7 @@ func newBBHash() *BBHash {
 // The gamma parameter is the expansion factor for the bit vector; the paper recommends
 // a value of 2.0. The larger the value the more memory will be consumed by the BBHash.
 func NewSequential(gamma float64, keys []uint64) (*BBHash, error) {
-	if gamma < 1.0 {
-		gamma = 1.0
-	}
+	gamma = max(gamma, minimalGamma)
 	bb := newBBHash()
 	if err := bb.compute(gamma, keys); err != nil {
 		return nil, err
@@ -44,9 +44,7 @@ func NewSequential(gamma float64, keys []uint64) (*BBHash, error) {
 
 // NewSequentialWithKeymap is similar to NewSequential, but in addition returns the reverse map.
 func NewSequentialWithKeymap(gamma float64, keys []uint64) (*BBHash, []uint64, error) {
-	if gamma <= 1.0 {
-		gamma = 2.0
-	}
+	gamma = max(gamma, minimalGamma)
 	bb := newBBHash()
 	keymap, err := bb.computeWithKeymap(gamma, keys)
 	if err != nil {

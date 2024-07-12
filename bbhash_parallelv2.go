@@ -39,6 +39,7 @@ func New(gamma float64, partitions int, keys []uint64) (*BBHash2, error) {
 // The gamma parameter is the expansion factor for the bit vector; the paper recommends
 // a value of 2.0. The larger the value the more memory will be consumed by the BBHash.
 func NewParallel2(gamma float64, numPartitions int, keys []uint64) (*BBHash2, error) {
+	gamma = max(gamma, minimalGamma)
 	// Partition the keys into numPartitions by placing keys with the
 	// same remainder (modulo numPartitions) into the same partition.
 	// This approach copies the keys into numPartitions slices, which
