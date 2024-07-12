@@ -7,7 +7,7 @@ import (
 
 const (
 	// minimalGamma is the smallest allowed expansion factor for the bit vector.
-	minimalGamma = 1.0
+	minimalGamma = 0.5
 
 	// Heuristic: 32 levels should be enough for even very large key sets
 	initialLevels = 32

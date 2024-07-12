@@ -410,6 +410,54 @@ func BenchmarkBBHashFind(b *testing.B) {
 	}
 }
 
+// BenchmarkGammaLevels searches for the gamma value that produces the maximum number of levels.
+// This is useful for analyzing the gamma values for varying number of keys, and how it impacts
+// the number of bits per key and the number of levels. This can help guide the choice of gamma,
+// partitions, and the initial levels for the BBHash.
+//
+// This benchmark is slow, and should be run with a -timeout=0 argument.
+//
+//	go test -run x -bench BenchmarkGammaLevels -benchmem -timeout=0 -partitions=4 -gamma=0.5,1,1.5,2.0 -keys=10_000_000,20_000_000 > gamma.txt
+func BenchmarkGammaLevels(b *testing.B) {
+	// The number of seeds to try for the given number of keys.
+	keysToSeeds := func(size int) int {
+		if size < 1_000_000_000 {
+			return 1_000_000_000 / size
+		}
+		return 1
+	}
+	for _, size := range keySizes {
+		for _, gamma := range gammaValues {
+			for _, partitions := range partitionValues {
+				b.Run(fmt.Sprintf("gamma=%.1f/partitions=%3d/keys=%d", gamma, partitions, size), func(b *testing.B) {
+					keys := generateKeys(size, 99)
+					maxBB, _ := bbhash.New(gamma, partitions, keys)
+					maxLvl, _ := maxBB.MaxMinLevels()
+					maxLvlSeed := 0
+					for seed := range keysToSeeds(size) {
+						keys := generateKeys(size, seed)
+						for range b.N {
+							bb, _ := bbhash.New(gamma, partitions, keys)
+							lvl, _ := bb.MaxMinLevels()
+							if lvl > maxLvl {
+								maxBB, maxLvl, maxLvlSeed = bb, lvl, seed
+							}
+						}
+					}
+					// Suppress the built-in metric for ns/op.
+					b.ReportMetric(0, "ns/op")
+					b.ReportMetric(maxBB.BitsPerKey(), "bits/key")
+					b.ReportMetric(float64(maxLvl), "max_levels")
+					// seed that produced the max levels
+					b.ReportMetric(float64(maxLvlSeed), "max_seed")
+					// number of seeds tried
+					b.ReportMetric(float64(keysToSeeds(size)), "seed_size")
+				})
+			}
+		}
+	}
+}
+
 func check(err error) {
 	if err != nil {
 		fmt.Println(err)
