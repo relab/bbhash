@@ -119,9 +119,9 @@ func (bb BBHash) falsePositiveRate() float64 {
 
 // BitVectors returns a Go slice for BBHash's per-level bit vectors.
 // This is intended for testing and debugging; no guarantees are made about the format.
-func (bb BBHash) BitVectors() string {
+func (bb BBHash) BitVectors(size int) string {
 	var b strings.Builder
-	b.WriteString("var bitVectors = [][]uint64{\n")
+	b.WriteString(fmt.Sprintf("var bitVectors%d = [][]uint64{\n", size))
 	for lvl, bv := range bb.bits {
 		b.WriteString(fmt.Sprintf("// Level %d:\n{\n", lvl))
 		for _, v := range bv.v {
