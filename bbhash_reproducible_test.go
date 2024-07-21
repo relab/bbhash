@@ -3,6 +3,7 @@ package bbhash_test
 import (
 	"flag"
 	"fmt"
+	"go/format"
 	"os"
 	"strings"
 	"testing"
@@ -31,7 +32,8 @@ func TestReproducibleBitVectors(t *testing.T) {
 	}
 
 	var bitVectors strings.Builder
-	bitVectors.WriteString("package bbhash_test\n\n")
+	var wantBitVectorsFunc strings.Builder
+	wantBitVectorsFunc.WriteString("package bbhash_test\n\nfunc wantBitVectors(size int) [][]uint64 {\nswitch size {\n")
 	done := make(map[int]bool)
 	for _, tt := range tests {
 		for _, size := range sizes {
@@ -42,6 +44,8 @@ func TestReproducibleBitVectors(t *testing.T) {
 					t.Fatal(err)
 				}
 				if *update && !done[size] {
+					wantBitVectorsFunc.WriteString(fmt.Sprintf("case %d:\n", size))
+					wantBitVectorsFunc.WriteString(fmt.Sprintf("return bitVectors%d\n", size))
 					bitVectors.WriteString(bb.BitVectors(size))
 					bitVectors.WriteString("\n")
 					done[size] = true
@@ -67,20 +71,15 @@ func TestReproducibleBitVectors(t *testing.T) {
 	if *update {
 		testFile := "bbhash_reproducible_bit_vectors_test.go"
 		t.Logf("rewriting %s", testFile)
-		if err := os.WriteFile(testFile, []byte(bitVectors.String()), 0o666); err != nil {
+		wantBitVectorsFunc.WriteString("}\n	return nil\n  }\n\n")
+		s, err := format.Source([]byte(wantBitVectorsFunc.String() + bitVectors.String()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(testFile, s, 0o666); err != nil {
 			t.Fatal(err)
 		}
 	}
-}
-
-func wantBitVectors(size int) [][]uint64 {
-	switch size {
-	case 1000:
-		return bitVectors1000
-	case 10000:
-		return bitVectors10000
-	}
-	return nil
 }
 
 // diff returns a custom diff of two slices of slices of uint64;

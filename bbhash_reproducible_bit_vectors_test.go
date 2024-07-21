@@ -1,5 +1,15 @@
 package bbhash_test
 
+func wantBitVectors(size int) [][]uint64 {
+	switch size {
+	case 1000:
+		return bitVectors1000
+	case 10000:
+		return bitVectors10000
+	}
+	return nil
+}
+
 var bitVectors1000 = [][]uint64{
 	// Level 0:
 	{
@@ -625,4 +635,3 @@ var bitVectors10000 = [][]uint64{
 		0x0004000000420000,
 	},
 }
-
