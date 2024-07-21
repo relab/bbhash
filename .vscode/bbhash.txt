@@ -10,6 +10,7 @@ Chewbacca
 Chikhi
 cpuprofile
 errgroup
+fasthash
 Fett
 GOARCH
 goroutines

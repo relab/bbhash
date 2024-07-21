@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"runtime"
 	"sync"
+
+	"github.com/relab/bbhash/internal/fast"
 )
 
 // NewParallel creates a new BBHash for the given keys. The keys must be unique.
@@ -38,11 +40,11 @@ func (bb *BBHash) computeParallel(gamma float64, keys []uint64) error {
 	// loop exits when there are no more keys to re-hash (see break statement below)
 	for lvl := 0; true; lvl++ {
 		// precompute the level hash to speed up the key hashing
-		lvlHash := levelHash(uint64(lvl))
+		lvlHash := fast.LevelHash(uint64(lvl))
 
 		if sz < 40000 {
 			for i := 0; i < len(keys); i++ {
-				h := keyHash(lvlHash, keys[i])
+				h := fast.KeyHash(lvlHash, keys[i])
 				lvlVector.update(h)
 			}
 		} else {
@@ -65,7 +67,7 @@ func (bb *BBHash) computeParallel(gamma float64, keys []uint64) error {
 					current.reset(wds)
 					// find colliding keys
 					for _, k := range keys[x:y] {
-						h := keyHash(lvlHash, k)
+						h := fast.KeyHash(lvlHash, k)
 						// update the bit and collision vectors for the current level
 						current.update(h)
 					}
@@ -81,7 +83,7 @@ func (bb *BBHash) computeParallel(gamma float64, keys []uint64) error {
 
 		// remove bit vector position assignments for colliding keys and add them to the redo set
 		for _, k := range keys {
-			h := keyHash(lvlHash, k)
+			h := fast.KeyHash(lvlHash, k)
 			// unset the bit vector position for the current key if it collided
 			if lvlVector.unsetCollision(h) {
 				redo = append(redo, k)

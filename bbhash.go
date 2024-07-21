@@ -3,6 +3,8 @@ package bbhash
 
 import (
 	"fmt"
+
+	"github.com/relab/bbhash/internal/fast"
 )
 
 const (
@@ -67,7 +69,7 @@ func NewSequentialWithKeymap(gamma float64, keys []uint64) (*BBHash, error) {
 // 2. The return value is in the expected range [1, len(keys)], but is a false positive.
 func (bb *BBHash) Find(key uint64) uint64 {
 	for lvl, bv := range bb.bits {
-		i := hash(uint64(lvl), key) % bv.size()
+		i := fast.Hash(uint64(lvl), key) % bv.size()
 		if bv.isSet(i) {
 			return bb.ranks[lvl] + bv.rank(i)
 		}
@@ -98,18 +100,18 @@ func (bb *BBHash) compute(gamma float64, keys []uint64) error {
 	// loop exits when there are no more keys to re-hash (see break statement below)
 	for lvl := 0; true; lvl++ {
 		// precompute the level hash to speed up the key hashing
-		lvlHash := levelHash(uint64(lvl))
+		lvlHash := fast.LevelHash(uint64(lvl))
 
 		// find colliding keys and possible bit vector positions for non-colliding keys
 		for _, k := range keys {
-			h := keyHash(lvlHash, k)
+			h := fast.KeyHash(lvlHash, k)
 			// update the bit and collision vectors for the current level
 			lvlVector.update(h)
 		}
 
 		// remove bit vector position assignments for colliding keys and add them to the redo set
 		for _, k := range keys {
-			h := keyHash(lvlHash, k)
+			h := fast.KeyHash(lvlHash, k)
 			// unset the bit vector position for the current key if it collided
 			if lvlVector.unsetCollision(h) {
 				// keys to re-hash at next level : F in the paper
@@ -148,11 +150,11 @@ func (bb *BBHash) computeWithKeymap(gamma float64, keys []uint64) error {
 	// loop exits when there are no more keys to re-hash (see break statement below)
 	for lvl := 0; true; lvl++ {
 		// precompute the level hash to speed up the key hashing
-		lvlHash := levelHash(uint64(lvl))
+		lvlHash := fast.LevelHash(uint64(lvl))
 
 		// find colliding keys and possible bit vector positions for non-colliding keys
 		for _, k := range keys {
-			h := keyHash(lvlHash, k)
+			h := fast.KeyHash(lvlHash, k)
 			// update the bit and collision vectors for the current level
 			lvlVector.update(h)
 		}
@@ -160,7 +162,7 @@ func (bb *BBHash) computeWithKeymap(gamma float64, keys []uint64) error {
 		// remove bit vector position assignments for colliding keys and add them to the redo set
 		levelKeys := make([]uint64, lvlVector.size())
 		for _, k := range keys {
-			h := keyHash(lvlHash, k)
+			h := fast.KeyHash(lvlHash, k)
 			// unset the bit vector position for the current key if it collided
 			if lvlVector.unsetCollision(h) {
 				// keys to re-hash at next level : F in the paper

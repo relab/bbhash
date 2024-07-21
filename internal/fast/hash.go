@@ -1,4 +1,4 @@
-package bbhash
+package fast
 
 import (
 	"crypto/rand"
@@ -7,18 +7,18 @@ import (
 
 const m uint64 = 0x880355f21e6d1965
 
-// hash returns the hash of the current level and key.
-func hash(level, key uint64) uint64 {
-	return keyHash(levelHash(level), key)
+// Hash returns the hash of the current level and key.
+func Hash(level, key uint64) uint64 {
+	return KeyHash(LevelHash(level), key)
 }
 
-// levelHash returns the hash of the given level.
-func levelHash(level uint64) uint64 {
+// LevelHash returns the hash of the given level.
+func LevelHash(level uint64) uint64 {
 	return mix(level) * m
 }
 
-// keyHash returns the hash of a key given a level hash.
-func keyHash(levelHash, key uint64) uint64 {
+// KeyHash returns the hash of a key given a level hash.
+func KeyHash(levelHash, key uint64) uint64 {
 	var h uint64 = levelHash
 	h ^= mix(key)
 	h *= m
