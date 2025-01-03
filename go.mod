@@ -1,5 +1,5 @@
 module github.com/relab/bbhash
 
-go 1.22.5
+go 1.24rc1
 
-require golang.org/x/sync v0.7.0
+require golang.org/x/sync v0.10.0
