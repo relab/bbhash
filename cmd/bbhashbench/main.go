@@ -139,7 +139,7 @@ func runParallel2(numKeys, numPartitions int, gamma float64, count int) ([]time.
 	elapsed := make([]time.Duration, count)
 	for i := 0; i < count; i++ {
 		start := time.Now()
-		bb, err = bbhash.NewParallel2(gamma, numPartitions, keys)
+		bb, err = bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(numPartitions))
 		elapsed[i] = time.Since(start)
 		if err != nil {
 			panic(err)

@@ -8,6 +8,9 @@ import (
 )
 
 const (
+	// defaultGamma is the default expansion factor for the bit vector.
+	defaultGamma = 2.0
+
 	// minimalGamma is the smallest allowed expansion factor for the bit vector.
 	minimalGamma = 0.5
 
@@ -40,17 +43,7 @@ func newBBHash() *BBHash {
 func NewSequential(gamma float64, keys []uint64) (*BBHash, error) {
 	gamma = max(gamma, minimalGamma)
 	bb := newBBHash()
-	if err := bb.compute(gamma, keys); err != nil {
-		return nil, err
-	}
-	return bb, nil
-}
-
-// NewSequentialWithKeymap is similar to NewSequential, but in addition computes the reverse map.
-func NewSequentialWithKeymap(gamma float64, keys []uint64) (*BBHash, error) {
-	gamma = max(gamma, minimalGamma)
-	bb := newBBHash()
-	if err := bb.computeWithKeymap(gamma, keys); err != nil {
+	if err := bb.compute(keys, gamma); err != nil {
 		return nil, err
 	}
 	return bb, nil
@@ -87,7 +80,7 @@ func (bb *BBHash) Key(index uint64) uint64 {
 }
 
 // compute computes the minimal perfect hash for the given keys.
-func (bb *BBHash) compute(gamma float64, keys []uint64) error {
+func (bb *BBHash) compute(keys []uint64, gamma float64) error {
 	sz := len(keys)
 	if sz == 0 {
 		return fmt.Errorf("bbhash: compute: no keys")
@@ -140,13 +133,13 @@ func (bb *BBHash) compute(gamma float64, keys []uint64) error {
 }
 
 // computeWithKeymap is similar to compute(), but in addition returns the reverse keymap.
-func (bb *BBHash) computeWithKeymap(gamma float64, keys []uint64) error {
+func (bb *BBHash) computeWithKeymap(keys []uint64, gamma float64) error {
 	sz := len(keys)
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
 	// bit vectors for current level : A and C in the paper
 	lvlVector := newBCVector(words(sz, gamma))
 	bb.reverseMap = make([]uint64, len(keys)+1)
-	levelKeysMap := make([][]uint64, 0, initialLevels)
+	levelKeysMap := make([][]uint64, 0, initialLevels) // TODO: use o.initialLevels
 	// loop exits when there are no more keys to re-hash (see break statement below)
 	for lvl := 0; true; lvl++ {
 		// precompute the level hash to speed up the key hashing

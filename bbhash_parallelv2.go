@@ -4,21 +4,41 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// TODO Check what's the overhead of adding the reverse mapping to the BBHash struct?
+// TODO check the overhead of the BBHash2 struct vs just using a slice of BBHash vs a slice of BBHash pointers vs just BBHash
+
+// BBHash2 represents a minimal perfect hash for a set of keys.
 type BBHash2 struct {
 	partitions []*BBHash
 	offsets    []int
 }
 
 // New creates a new BBHash2 for the given keys. The keys must be unique.
-// If partitions is 1 or less, then a single BBHash is created, wrapped in a BBHash2.
-// Otherwise, the keys are partitioned into the given the number partitions,
-// and multiple BBHashes are created in parallel.
-//
-// The gamma parameter is the expansion factor for the bit vector; the paper recommends
-// a value of 2.0. The larger the value the more memory will be consumed by the BBHash.
-func New(gamma float64, partitions int, keys []uint64) (*BBHash2, error) {
-	if partitions <= 1 {
-		bb, err := NewSequential(gamma, keys)
+// With fewer than 1000 keys, the sequential version is always used.
+func New(keys []uint64, opts ...Options) (*BBHash2, error) {
+	if len(keys) < 1 {
+		panic("bbhash: no keys provided")
+	}
+
+	o := newOptions(opts...)
+	if o.partitions > 1 && o.parallel {
+		panic("bbhash: parallel and partitions not supported")
+	}
+	if len(keys) < 1000 || o.partitions == 1 {
+		bb := &BBHash{
+			bits: make([]*bitVector, 0, o.initialLevels),
+		}
+		var err error
+		switch {
+		case !o.reverseMap && !o.parallel:
+			err = bb.compute(keys, o.gamma)
+		case o.reverseMap && !o.parallel:
+			err = bb.computeWithKeymap(keys, o.gamma)
+		case !o.reverseMap && o.parallel:
+			err = bb.computeParallel(keys, o.gamma)
+		case o.reverseMap && o.parallel:
+			panic("bbhash: parallel and reverse map not supported")
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -27,19 +47,11 @@ func New(gamma float64, partitions int, keys []uint64) (*BBHash2, error) {
 			offsets:    []int{0},
 		}, nil
 	}
-	return NewParallel2(gamma, partitions, keys)
+	return newParallel2(o.gamma, o.partitions, keys, o.reverseMap)
 }
 
-// NewParallel2 creates a new BBHash2 for the given keys. The keys must be unique.
-// For small key sets, you may want to use NewSequential instead, since it will likely
-// be faster. NewParallel2 allocates more memory than NewSequential, but will be faster
-// for large key sets.
-//
-// This partitions the input and creates multiple BBHashes using multiple goroutines.
-// The gamma parameter is the expansion factor for the bit vector; the paper recommends
-// a value of 2.0. The larger the value the more memory will be consumed by the BBHash.
-func NewParallel2(gamma float64, numPartitions int, keys []uint64) (*BBHash2, error) {
-	gamma = max(gamma, minimalGamma)
+// newParallel2 partitions the keys and creates multiple BBHashes in parallel.
+func newParallel2(gamma float64, numPartitions int, keys []uint64, withKeyMap bool) (*BBHash2, error) {
 	// Partition the keys into numPartitions by placing keys with the
 	// same remainder (modulo numPartitions) into the same partition.
 	// This approach copies the keys into numPartitions slices, which
@@ -55,12 +67,14 @@ func NewParallel2(gamma float64, numPartitions int, keys []uint64) (*BBHash2, er
 	}
 	grp := &errgroup.Group{}
 	for offset, j := 0, 0; j < numPartitions; j++ {
-		j := j
 		bb.offsets[j] = offset
 		offset += len(partitionKeys[j])
 		grp.Go(func() error {
-			bb.partitions[j] = newBBHash()
-			return bb.partitions[j].compute(gamma, partitionKeys[j])
+			bb.partitions[j] = newBBHash() // TODO This should create with o.initialLevels
+			if withKeyMap {
+				return bb.partitions[j].computeWithKeymap(partitionKeys[j], gamma)
+			}
+			return bb.partitions[j].compute(partitionKeys[j], gamma)
 		})
 	}
 	if err := grp.Wait(); err != nil {
@@ -83,4 +97,17 @@ func NewParallel2(gamma float64, numPartitions int, keys []uint64) (*BBHash2, er
 func (bb *BBHash2) Find(key uint64) uint64 {
 	i := key % uint64(len(bb.partitions))
 	return bb.partitions[i].Find(key) + uint64(bb.offsets[i])
+}
+
+// Key returns the key for the given index.
+// The index must be in the range [1, len(keys)], otherwise 0 is returned.
+func (bb *BBHash2) Key(index uint64) uint64 {
+	// TODO add tests for this method when both reverse map and partitioning is used
+	for _, b := range bb.partitions {
+		if index < uint64(len(b.reverseMap)) {
+			return b.reverseMap[index]
+		}
+		index -= uint64(len(b.reverseMap))
+	}
+	return 0
 }
