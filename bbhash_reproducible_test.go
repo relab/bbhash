@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/relab/bbhash"
+	"github.com/relab/bbhash/internal/test"
 )
 
 var update = flag.Bool("update", false, "update bit vectors golden test file")
@@ -38,7 +39,7 @@ func TestReproducibleBitVectors(t *testing.T) {
 	for _, tt := range tests {
 		for _, size := range sizes {
 			keys := generateKeys(size, tt.seed)
-			t.Run(fmt.Sprintf("name=%s/gamma=%0.1f/keys=%d", tt.name, tt.gamma, size), func(t *testing.T) {
+			t.Run(test.Name(tt.name, []string{"gamma", "keys"}, tt.gamma, size), func(t *testing.T) {
 				bb, err := tt.fn(tt.gamma, keys)
 				if err != nil {
 					t.Fatal(err)
@@ -56,15 +57,7 @@ func TestReproducibleBitVectors(t *testing.T) {
 				if diff := diff(want, got); diff != "" {
 					t.Errorf("bit vectors mismatch (-want +got):\n%s", diff)
 				}
-				keyMap := make(map[uint64]uint64)
-				for keyIndex, key := range keys {
-					hashIndex := bb.Find(key)
-					checkKey(t, keyIndex, key, uint64(len(keys)), hashIndex)
-					if x, ok := keyMap[hashIndex]; ok {
-						t.Errorf("index %d already mapped to key %#x", hashIndex, x)
-					}
-					keyMap[hashIndex] = key
-				}
+				validateKeyMappings(t, bb, keys)
 			})
 		}
 	}
