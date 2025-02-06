@@ -100,36 +100,40 @@ func writeCSVFile(filename string, create, find map[int][]time.Duration, levels 
 
 func runSequential(numKeys int, gamma float64, count int) ([]time.Duration, []time.Duration, int, float64) {
 	keys := generateKeys(numKeys, 99)
-	var bb *bbhash.BBHash
+	var bb *bbhash.BBHash2
 	var err error
 	elapsed := make([]time.Duration, count)
 	for i := 0; i < count; i++ {
 		start := time.Now()
-		bb, err = bbhash.NewSequential(gamma, keys)
+		bb, err = bbhash.New(keys, bbhash.Gamma(gamma))
 		elapsed[i] = time.Since(start)
 		if err != nil {
 			panic(err)
 		}
 	}
 	fmt.Println("Sequential:", bb)
-	return elapsed, findAll(bb, keys, count), bb.Levels(), bb.BitsPerKey()
+	// We return only the max level for now
+	max, _ := bb.MaxMinLevels()
+	return elapsed, findAll(bb, keys, count), max, bb.BitsPerKey()
 }
 
 func runParallel(numKeys int, gamma float64, count int) ([]time.Duration, []time.Duration, int, float64) {
 	keys := generateKeys(numKeys, 99)
-	var bb *bbhash.BBHash
+	var bb *bbhash.BBHash2
 	var err error
 	elapsed := make([]time.Duration, count)
 	for i := 0; i < count; i++ {
 		start := time.Now()
-		bb, err = bbhash.NewParallel(gamma, keys)
+		bb, err = bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Parallel())
 		elapsed[i] = time.Since(start)
 		if err != nil {
 			panic(err)
 		}
 	}
 	fmt.Println("Parallel:", bb)
-	return elapsed, findAll(bb, keys, count), bb.Levels(), bb.BitsPerKey()
+	// We return only the max level for now
+	max, _ := bb.MaxMinLevels()
+	return elapsed, findAll(bb, keys, count), max, bb.BitsPerKey()
 }
 
 func runParallel2(numKeys, numPartitions int, gamma float64, count int) ([]time.Duration, []time.Duration, int, float64) {

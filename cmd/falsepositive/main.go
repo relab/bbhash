@@ -21,7 +21,7 @@ func main() {
 	for _, gamma := range []float64{1.1, 1.5, 1.7, 2.0, 2.5, 3.0, 5.0} {
 		for _, size := range sizes {
 			keys := generateKeys(size, 123)
-			bb, err := bbhash.NewSequential(gamma, keys)
+			bb, err := bbhash.New(keys, bbhash.Gamma(gamma))
 			if err != nil {
 				panic(err)
 			}
