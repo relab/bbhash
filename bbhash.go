@@ -25,9 +25,9 @@ const (
 
 // BBHash represents a minimal perfect hash for a set of keys.
 type BBHash struct {
-	bits       []*bitVector
-	ranks      []uint64
-	reverseMap []uint64 // index -> key (only filled if needed)
+	bits       []*bitVector // bit vectors for each level
+	ranks      []uint64     // total rank for each level
+	reverseMap []uint64     // index -> key (only filled if needed)
 }
 
 func newBBHash() *BBHash {
