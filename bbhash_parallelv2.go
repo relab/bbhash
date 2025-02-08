@@ -112,6 +112,15 @@ func (bb *BBHash2) Key(index uint64) uint64 {
 	return 0
 }
 
+// SinglePartition returns the underlying BBHash if it contains a single partition.
+// If there are multiple partitions, it returns nil.
+func (bb *BBHash2) SinglePartition() *BBHash {
+	if len(bb.partitions) == 1 {
+		return bb.partitions[0]
+	}
+	return nil
+}
+
 // enforce interface compliance
 var (
 	_ bbhash     = (*BBHash2)(nil)

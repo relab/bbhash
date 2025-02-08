@@ -36,19 +36,6 @@ func newBBHash() *BBHash {
 	}
 }
 
-// NewSequential creates a new BBHash for the given keys. The keys must be unique.
-// This creates the BBHash in a single goroutine.
-// The gamma parameter is the expansion factor for the bit vector; the paper recommends
-// a value of 2.0. The larger the value the more memory will be consumed by the BBHash.
-func NewSequential(gamma float64, keys []uint64) (*BBHash, error) {
-	gamma = max(gamma, minimalGamma)
-	bb := newBBHash()
-	if err := bb.compute(keys, gamma); err != nil {
-		return nil, err
-	}
-	return bb, nil
-}
-
 // Find returns a unique index representing the key in the minimal hash set.
 //
 // The return value is meaningful ONLY for keys in the original key set
@@ -82,10 +69,6 @@ func (bb *BBHash) Key(index uint64) uint64 {
 // compute computes the minimal perfect hash for the given keys.
 func (bb *BBHash) compute(keys []uint64, gamma float64) error {
 	sz := len(keys)
-	if sz == 0 {
-		return fmt.Errorf("bbhash: compute: no keys")
-	}
-
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
 	// bit vectors for current level : A and C in the paper
 	lvlVector := newBCVector(words(sz, gamma))
