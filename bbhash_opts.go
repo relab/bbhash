@@ -1,5 +1,21 @@
 package bbhash
 
+const (
+	// defaultGamma is the default expansion factor for the bit vector.
+	defaultGamma = 2.0
+
+	// minimalGamma is the smallest allowed expansion factor for the bit vector.
+	minimalGamma = 0.5
+
+	// Heuristic: 32 levels should be enough for even very large key sets
+	initialLevels = 32
+
+	// Maximum number of attempts (level) at making a perfect hash function.
+	// Per the paper, each successive level exponentially reduces the
+	// probability of collision.
+	maxLevel = 200
+)
+
 type options struct {
 	gamma         float64
 	initialLevels int
