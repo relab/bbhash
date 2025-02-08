@@ -103,7 +103,6 @@ func (bb *BBHash2) Find(key uint64) uint64 {
 // Key returns the key for the given index.
 // The index must be in the range [1, len(keys)], otherwise 0 is returned.
 func (bb *BBHash2) Key(index uint64) uint64 {
-	// TODO add tests for this method when both reverse map and partitioning is used
 	for _, b := range bb.partitions {
 		if index < uint64(len(b.reverseMap)) {
 			return b.reverseMap[index]
@@ -111,6 +110,12 @@ func (bb *BBHash2) Key(index uint64) uint64 {
 		index -= uint64(len(b.reverseMap))
 	}
 	return 0
+}
+
+// Partitions returns the number of partitions in the BBHash2.
+// This is mainly useful for testing and may be removed in the future.
+func (bb *BBHash2) Partitions() int {
+	return len(bb.partitions)
 }
 
 // SinglePartition returns the underlying BBHash if it contains a single partition.
