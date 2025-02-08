@@ -19,7 +19,6 @@ const (
 type options struct {
 	gamma         float64
 	initialLevels int
-	maxLevel      int
 	partitions    int
 	parallel      bool
 	reverseMap    bool
@@ -29,7 +28,6 @@ func newOptions(opts ...Options) *options {
 	o := &options{
 		gamma:         defaultGamma,
 		initialLevels: initialLevels,
-		maxLevel:      maxLevel,
 		partitions:    1,
 		parallel:      false,
 		reverseMap:    false,
@@ -55,13 +53,6 @@ func Gamma(gamma float64) Options {
 func InitialLevels(levels int) Options {
 	return func(o *options) {
 		o.initialLevels = levels
-	}
-}
-
-// MaxLevel sets the maximum number of levels to use when creating a BBHash.
-func MaxLevel(level int) Options {
-	return func(o *options) {
-		o.maxLevel = max(level, maxLevel)
 	}
 }
 
