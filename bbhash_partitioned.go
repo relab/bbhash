@@ -52,22 +52,22 @@ func New(keys []uint64, opts ...Options) (*BBHash2, error) {
 }
 
 // newPartitioned partitions the keys and creates multiple BBHashes in parallel.
-func newPartitioned(gamma float64, initialLevels, numPartitions int, keys []uint64, withKeyMap bool) (*BBHash2, error) {
-	// Partition the keys into numPartitions by placing keys with the
-	// same remainder (modulo numPartitions) into the same partition.
-	// This approach copies the keys into numPartitions slices, which
+func newPartitioned(gamma float64, initialLevels, partitions int, keys []uint64, withKeyMap bool) (*BBHash2, error) {
+	// Partition the keys into partitions by placing keys with the
+	// same remainder (modulo partitions) into the same partition.
+	// This approach copies the keys into partitions slices, which
 	// may lead to some variation in the number of keys in each partition.
-	partitionKeys := make([][]uint64, numPartitions)
+	partitionKeys := make([][]uint64, partitions)
 	for _, k := range keys {
-		i := k % uint64(numPartitions)
+		i := k % uint64(partitions)
 		partitionKeys[i] = append(partitionKeys[i], k)
 	}
 	bb := &BBHash2{
-		partitions: make([]*BBHash, numPartitions),
-		offsets:    make([]int, numPartitions),
+		partitions: make([]*BBHash, partitions),
+		offsets:    make([]int, partitions),
 	}
 	grp := &errgroup.Group{}
-	for offset, j := 0, 0; j < numPartitions; j++ {
+	for offset, j := 0, 0; j < partitions; j++ {
 		bb.offsets[j] = offset
 		offset += len(partitionKeys[j])
 		grp.Go(func() error {
