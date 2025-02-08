@@ -28,7 +28,7 @@ type Options func(*options)
 
 // Gamma sets the gamma parameter for creating a BBHash.
 // The gamma parameter is the expansion factor for the bit vector; the paper recommends
-// a value of 2.0. The larger the value the more memory will be consumed by the BBHash.
+// a value of 2.0. The larger the value the more space will be consumed by the BBHash.
 func Gamma(gamma float64) Options {
 	return func(o *options) {
 		o.gamma = max(gamma, minimalGamma)

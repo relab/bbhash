@@ -30,7 +30,7 @@ type BBHash struct {
 	reverseMap []uint64     // index -> key (only filled if needed)
 }
 
-func newBBHash() *BBHash {
+func newBBHash(initialLevels int) *BBHash {
 	return &BBHash{
 		bits: make([]*bitVector, 0, initialLevels),
 	}
@@ -122,7 +122,8 @@ func (bb *BBHash) computeWithKeymap(keys []uint64, gamma float64) error {
 	// bit vectors for current level : A and C in the paper
 	lvlVector := newBCVector(words(sz, gamma))
 	bb.reverseMap = make([]uint64, len(keys)+1)
-	levelKeysMap := make([][]uint64, 0, initialLevels) // TODO: use o.initialLevels
+	levelKeysMap := make([][]uint64, 0, len(bb.bits)) // number of initial levels = len(bb.bits)
+
 	// loop exits when there are no more keys to re-hash (see break statement below)
 	for lvl := 0; true; lvl++ {
 		// precompute the level hash to speed up the key hashing

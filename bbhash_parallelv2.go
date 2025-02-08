@@ -25,9 +25,7 @@ func New(keys []uint64, opts ...Options) (*BBHash2, error) {
 		panic("bbhash: parallel and partitions not supported")
 	}
 	if len(keys) < 1000 || o.partitions == 1 {
-		bb := &BBHash{
-			bits: make([]*bitVector, 0, o.initialLevels),
-		}
+		bb := newBBHash(o.initialLevels)
 		var err error
 		switch {
 		case !o.reverseMap && !o.parallel:
@@ -47,11 +45,11 @@ func New(keys []uint64, opts ...Options) (*BBHash2, error) {
 			offsets:    []int{0},
 		}, nil
 	}
-	return newParallel2(o.gamma, o.partitions, keys, o.reverseMap)
+	return newParallel2(o.gamma, o.initialLevels, o.partitions, keys, o.reverseMap)
 }
 
 // newParallel2 partitions the keys and creates multiple BBHashes in parallel.
-func newParallel2(gamma float64, numPartitions int, keys []uint64, withKeyMap bool) (*BBHash2, error) {
+func newParallel2(gamma float64, initialLevels, numPartitions int, keys []uint64, withKeyMap bool) (*BBHash2, error) {
 	// Partition the keys into numPartitions by placing keys with the
 	// same remainder (modulo numPartitions) into the same partition.
 	// This approach copies the keys into numPartitions slices, which
@@ -70,7 +68,7 @@ func newParallel2(gamma float64, numPartitions int, keys []uint64, withKeyMap bo
 		bb.offsets[j] = offset
 		offset += len(partitionKeys[j])
 		grp.Go(func() error {
-			bb.partitions[j] = newBBHash() // TODO This should create with o.initialLevels
+			bb.partitions[j] = newBBHash(initialLevels)
 			if withKeyMap {
 				return bb.partitions[j].computeWithKeymap(partitionKeys[j], gamma)
 			}
