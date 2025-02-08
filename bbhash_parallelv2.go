@@ -111,3 +111,9 @@ func (bb *BBHash2) Key(index uint64) uint64 {
 	}
 	return 0
 }
+
+// enforce interface compliance
+var (
+	_ bbhash     = (*BBHash2)(nil)
+	_ reverseMap = (*BBHash2)(nil)
+)

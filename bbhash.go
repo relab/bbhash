@@ -210,3 +210,9 @@ func (bb *BBHash) computeLevelRanks() {
 		rank += bv.onesCount()
 	}
 }
+
+// enforce interface compliance
+var (
+	_ bbhash     = (*BBHash)(nil)
+	_ reverseMap = (*BBHash)(nil)
+)
