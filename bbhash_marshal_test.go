@@ -52,7 +52,7 @@ func BenchmarkMarshalBinaryBBHash(b *testing.B) {
 				bpk := bb.BitsPerKey()
 				dataLen := 0
 				b.ResetTimer()
-				for range b.N {
+				for b.Loop() {
 					d, err := bb.MarshalBinary()
 					if err != nil {
 						b.Fatalf("Failed to marshal BBHash: %v", err)
@@ -83,7 +83,7 @@ func BenchmarkUnmarshalBinaryBBHash(b *testing.B) {
 				}
 				dataLen := len(d)
 				b.ResetTimer()
-				for range b.N {
+				for b.Loop() {
 					newBB := &bbhash.BBHash{}
 					if err = newBB.UnmarshalBinary(d); err != nil {
 						b.Fatalf("Failed to unmarshal BBHash: %v", err)

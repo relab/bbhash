@@ -47,7 +47,7 @@ func BenchmarkHash64(b *testing.B) {
 		buf := make([]byte, size)
 		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
 			b.SetBytes(int64(size))
-			for range b.N {
+			for b.Loop() {
 				fast.Hash64(0, buf)
 			}
 		})

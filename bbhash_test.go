@@ -265,16 +265,16 @@ func TestReverseMapping(t *testing.T) {
 }
 
 // BenchmarkReverseMapping benchmarks the speed of building a reverse map.
-// The original implementation using NewSequential+Find is very slow;
+// The original implementation using New(Sequential)+Find is very slow;
 // with 10_000_000 keys it takes more than 13 hours on a Mac Studio M2 Max 64GB.
-// The NewSequentialWithKeymap with 1_000_000_000 keys takes less than 6 minutes.
+// The New(WithReverseMap) with 1_000_000_000 keys takes less than 6 minutes.
 //
 //	go test -run x -bench BenchmarkReverseMapping -benchmem -timeout=0 -count 1 > reverse.txt
 func BenchmarkReverseMapping(b *testing.B) {
 	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
-			name := test.Name("NewSequentialWithKeymap", []string{"gamma", "keys"}, gamma, size)
+			name := test.Name("New(WithReverseMap)", []string{"gamma", "keys"}, gamma, size)
 			b.Run(name, func(b *testing.B) {
 				for b.Loop() {
 					bbhash.New(keys, bbhash.Gamma(gamma), bbhash.WithReverseMap())
@@ -282,9 +282,9 @@ func BenchmarkReverseMapping(b *testing.B) {
 			})
 
 			if size > 1_000_000 {
-				continue // Skip the NewSequential+Find benchmark for large sizes; it's too slow.
+				continue // Skip the New(Sequential)+Find benchmark for large sizes; it's too slow.
 			}
-			name = test.Name("NewSequential+Find", []string{"gamma", "keys"}, gamma, size)
+			name = test.Name("New(Sequential)+Find", []string{"gamma", "keys"}, gamma, size)
 			b.Run(name, func(b *testing.B) {
 				for b.Loop() {
 					bb, _ := bbhash.New(keys, bbhash.Gamma(gamma))
@@ -296,7 +296,7 @@ func BenchmarkReverseMapping(b *testing.B) {
 }
 
 // BenchmarkBBHashNew benchmarks the construction of a new BBHash using
-// sequential and parallel variants. This will take a long time to run,
+// sequential and partition variants. This will take a long time to run,
 // especially if you enable large sizes. Thus, to avoid timeouts, you
 // should run this with a -timeout=0 argument.
 //
