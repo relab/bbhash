@@ -11,7 +11,6 @@ import (
 // in a single loop vs zeroing them in two separate loops vs using the clear function vs creating a new slice.
 //
 // It looks like creating a new slice is faster than clearing a slice when the slice is larger than 1_000_000 elements.
-// Need to run the same benchmark on M2 Max in the office and on bbchain and gorina6.
 //
 // $ benchstat -table "" -col /func -row /size bcvector-bench.txt
 //            │ combined_zero │            separate_zero            │                clear                 │             new_alloc_vec              │

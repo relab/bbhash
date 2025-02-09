@@ -52,9 +52,7 @@ func (b *bitVector) isSet(i uint64) bool {
 // reset reduces the bit vector's size to words and zeroes the elements.
 func (b *bitVector) reset(words uint64) {
 	b.v = b.v[:words]
-	for i := range b.v {
-		b.v[i] = 0
-	}
+	clear(b.v)
 }
 
 // onesCount returns the number of one bits ("population count") in the bit vector.
