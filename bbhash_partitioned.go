@@ -107,7 +107,7 @@ func (bb *BBHash2) Key(index uint64) uint64 {
 		if index < uint64(len(b.reverseMap)) {
 			return b.reverseMap[index]
 		}
-		index -= uint64(len(b.reverseMap))
+		index -= uint64(len(b.reverseMap)) - 1
 	}
 	return 0
 }
