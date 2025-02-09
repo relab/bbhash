@@ -2,7 +2,7 @@
 
 BBHash is a fast Go implementation of a minimal perfect hash function for large key sets.
 
-## Installing the package for use in your own project
+## Installing the module for use in your own project
 
 ```sh
 % go get github.com/relab/bbhash
@@ -19,7 +19,7 @@ import (
 
 func ExampleBBHash_Find() {
 	keys := []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	bb, err := bbhash.NewSequential(1.5, 0, keys)
+	bb, err := bbhash.New(keys, bbhash.Gamma(1.5))
 	if err != nil {
 		panic(err)
 	}
@@ -31,6 +31,38 @@ func ExampleBBHash_Find() {
 	// Output:
 	// 2, 6, 8, 3, 5, 7, 1, 9, 10, 4,
 }
+```
+
+## Advanced usage
+
+The `bbhash.New` function takes a slice of keys as its first argument.
+The keys must be unique and of type `uint64`.
+`New` also takes zero or more `bbhash.Option` arguments.
+These are the available options:
+
+| Option | Description |
+| --- | --- |
+| `Gamma(float64)`     | Set the gamma parameter of the BBHash algorithm. Default is 2.0.               |
+| `InitialLevels(int)` | Set the initial number of levels in the BBHash algorithm. Default is 32.       |
+| `Partitions(int)`    | Set the number of partitions to split the keys into and compute parallel.      |
+| `WithReverseMap()`   | Create a reverse map that allows you to retrieve the key from the hash index.  |
+| `Parallel()`         | Use parallelism in the BBHash algorithm. Prefer the Partitions option instead. |
+
+The options can be combined like this:
+
+```go
+bb, err := bbhash.New(keys)
+bb, err := bbhash.New(keys, bbhash.Gamma(1.5), bbhash.InitialLevels(64))
+bb, err := bbhash.New(keys, bbhash.InitialLevels(20))
+bb, err := bbhash.New(keys, bbhash.Gamma(1.5), bbhash.Partitions(4))
+bb, err := bbhash.New(keys, bbhash.Gamma(1.5), bbhash.Partitions(4), bbhash.WithReverseMap())
+```
+
+But the following combinations are not supported:
+
+```go
+bb, err := bbhash.New(keys, bbhash.Parallel(), bbhash.Partitions(4))
+bb, err := bbhash.New(keys, bbhash.Parallel(), bbhash.WithReverseMap())
 ```
 
 ## Credits
