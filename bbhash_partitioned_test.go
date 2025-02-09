@@ -86,6 +86,3 @@ func TestNewOptions(t *testing.T) {
 		})
 	}
 }
-
-// TODO add tests for the BBHash2.Find method
-// TODO add tests for the BBHash2.Key method when both reverse map and partitioning is used

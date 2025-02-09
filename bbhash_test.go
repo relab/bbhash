@@ -34,7 +34,7 @@ var (
 //
 //	go test -run x -bench BenchmarkBBHashNew -benchmem -timeout=0 -count 2 -gamma=1.5,2 -partitions=1,2,4,8 -keys=1000,10000
 //	go test -run x -bench BenchmarkBBhashFind -benchmem -timeout=0 -count 2 -gamma=1.5,2 -partitions=1,2,4,8 -keys=1000,10000
-//	go test -run x -bench BenchmarkReverseMapping -benchmem -timeout=0 -count 2 -gamma=1.5,2 -keys=long
+//	go test -run x -bench BenchmarkReverseMapping -benchmem -timeout=0 -count 2 -gamma=1.5,2 -partitions=1,2,4,8 -keys=long
 func TestMain(m *testing.M) {
 	var (
 		keySizesSlice  = flag.String("keys", "", `list of number of keys to generate (use "long" for 10M, 100M, 1B)`)
@@ -147,6 +147,8 @@ func TestManyKeys(t *testing.T) {
 		{name: "ReverseMap", opts: []bbhash.Options{bbhash.WithReverseMap()}},
 		{name: "Parallel", opts: []bbhash.Options{bbhash.Parallel()}},
 		{name: "Partitioned4", opts: []bbhash.Options{bbhash.Partitions(4)}},
+		{name: "Partitioned8", opts: []bbhash.Options{bbhash.Partitions(8)}},
+		{name: "Partitioned15", opts: []bbhash.Options{bbhash.Partitions(15)}},
 	}
 	for _, tc := range tcs {
 		for _, gamma := range []float64{1.1, 1.5, 2.0, 2.5, 3.0, 5.0} {
@@ -196,9 +198,10 @@ func TestSlow(t *testing.T) {
 	}
 }
 
-// getKeymap returns a reverse map of keys to indices using the Find method.
-// This is used to compare the reverse map built by computeWithKeymap.
-func getKeymap(keys []uint64, bb mphf) []uint64 {
+// getReverseMap returns a reverse map from indices to keys.
+// The reverse map is built by calling Find for each key.
+// This is used to compare the reverse map built by WithReverseMap option.
+func getReverseMap(keys []uint64, bb mphf) []uint64 {
 	keyMap := make([]uint64, len(keys)+1)
 	for _, key := range keys {
 		hashIndex := bb.Find(key)
@@ -207,7 +210,7 @@ func getKeymap(keys []uint64, bb mphf) []uint64 {
 	return keyMap
 }
 
-// TestReverseMapping checks that the reverse map returned from NewSequentialWithKeymap is correct.
+// TestReverseMapping checks that the reverse map returned from New(WithReverseMap) is correct.
 // First it builds a reverse map the slow way, then it builds a reverse map the fast way.
 // Then it compares the two maps.
 func TestReverseMapping(t *testing.T) {
@@ -215,51 +218,51 @@ func TestReverseMapping(t *testing.T) {
 		1000,
 		10_000,
 		100_000,
-		1_000_000,
 	}
 	for _, size := range sizes {
 		keys := generateKeys(int(size), 99)
-		for _, gamma := range []float64{0.5, 1.1, 1.5, 2.0} {
-			t.Run(test.Name("Params", []string{"gamma", "keys"}, gamma, size), func(t *testing.T) {
-				// Build the BBHash using the sequential algorithm.
-				bb, err := bbhash.New(keys, bbhash.Gamma(gamma))
-				if err != nil {
-					t.Error(err)
-				}
-				// Build the reverse map using Find.
-				keymap := getKeymap(keys, bb)
-
-				// Build the reverse map directly using WithReverseMap option.
-				bm, err := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.WithReverseMap())
-				if err != nil {
-					t.Error(err)
-				}
-
-				// Check that the two keymaps are equal.
-				for i := range size {
-					if bm.Key(i) != keymap[i] {
-						// Show only the high 16 bits of the key.
-						t.Errorf("bm.Key(%d) = %x, want %x", i, bm.Key(i)>>48, keymap[i]>>48)
+		for _, gamma := range []float64{0.5, 1.5, 2.0} {
+			for _, partitions := range []int{1, 2, 3, 5, 20} {
+				t.Run(test.Name("Params", []string{"gamma", "partitions", "keys"}, gamma, partitions, size), func(t *testing.T) {
+					bb, err := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
+					if err != nil {
+						t.Error(err)
 					}
-				}
+					// Build the reverse map using Find.
+					reverseMap := getReverseMap(keys, bb)
 
-				// Check that Key() returns the correct key for the boundary indices.
-				tests := []struct {
-					index    uint64
-					wantZero bool
-				}{
-					{0, true},
-					{1, false},
-					{size - 1, false},
-					{size, false},
-					{size + 1, true},
-				}
-				for _, test := range tests {
-					if got := bm.Key(test.index); (got == 0) != test.wantZero {
-						t.Errorf("bm.Key(%d) = %x, want %v", test.index, got>>48, test.wantZero)
+					// Build the reverse map directly using WithReverseMap option.
+					bm, err := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions), bbhash.WithReverseMap())
+					if err != nil {
+						t.Error(err)
 					}
-				}
-			})
+
+					// Check that the two reverse maps are equal.
+					for i := range size {
+						if bm.Key(i) != reverseMap[i] {
+							// Show only the high 16 bits of the key.
+							t.Errorf("bm.Key(%d) = %x, want %x", i, bm.Key(i)>>48, reverseMap[i]>>48)
+						}
+					}
+
+					// Check that Key() returns the correct key for the boundary indices.
+					tests := []struct {
+						index    uint64
+						wantZero bool
+					}{
+						{0, true},
+						{1, false},
+						{size - 1, false},
+						{size, false},
+						{size + 1, true},
+					}
+					for _, test := range tests {
+						if got := bm.Key(test.index); (got == 0) != test.wantZero {
+							t.Errorf("bm.Key(%d) = %x, want %v", test.index, got>>48, test.wantZero)
+						}
+					}
+				})
+			}
 		}
 	}
 }
@@ -274,23 +277,25 @@ func BenchmarkReverseMapping(b *testing.B) {
 	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
-			name := test.Name("New(WithReverseMap)", []string{"gamma", "keys"}, gamma, size)
-			b.Run(name, func(b *testing.B) {
-				for b.Loop() {
-					bbhash.New(keys, bbhash.Gamma(gamma), bbhash.WithReverseMap())
-				}
-			})
+			for _, partitions := range partitionValues {
+				name := test.Name("New(WithReverseMap)", []string{"gamma", "partitions", "keys"}, gamma, partitions, size)
+				b.Run(name, func(b *testing.B) {
+					for b.Loop() {
+						bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions), bbhash.WithReverseMap())
+					}
+				})
 
-			if size > 1_000_000 {
-				continue // Skip the New(Sequential)+Find benchmark for large sizes; it's too slow.
-			}
-			name = test.Name("New(Sequential)+Find", []string{"gamma", "keys"}, gamma, size)
-			b.Run(name, func(b *testing.B) {
-				for b.Loop() {
-					bb, _ := bbhash.New(keys, bbhash.Gamma(gamma))
-					getKeymap(keys, bb)
+				if size > 1_000_000 {
+					continue // Skip the New(Sequential)+Find benchmark for large sizes; it's too slow.
 				}
-			})
+				name = test.Name("New(Sequential)+Find", []string{"gamma", "partitions", "keys"}, gamma, partitions, size)
+				b.Run(name, func(b *testing.B) {
+					for b.Loop() {
+						bb, _ := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
+						getReverseMap(keys, bb)
+					}
+				})
+			}
 		}
 	}
 }
