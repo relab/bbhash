@@ -112,7 +112,7 @@ func (bvg *bvGenerator) createBitVectorMap(size, partitions int) string {
 		bvg.bitVectorPartition[size] = make(map[int]string)
 	}
 	if _, ok := bvg.bitVectorPartition[size][partitions]; !ok {
-		// Add the partition key only once
+		// Add the partitions key only once
 		bvg.bitVectorPartition[size][partitions] = fmt.Sprintf("%d: %s,\n", partitions, bitVectorVarName)
 	}
 	return bitVectorVarName

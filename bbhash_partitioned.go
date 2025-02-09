@@ -16,7 +16,7 @@ type BBHash2 struct {
 // New creates a new BBHash2 for the given keys. The keys must be unique.
 // Creation is configured using the provided options. The default options
 // are used if none are provided. Available options include: Gamma,
-// InitialLevels, MaxLevel, Partitions, Parallel, and WithReverseMap.
+// InitialLevels, Partitions, Parallel, and WithReverseMap.
 // With fewer than 1000 keys, the sequential version is always used.
 func New(keys []uint64, opts ...Options) (*BBHash2, error) {
 	if len(keys) < 1 {
