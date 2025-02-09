@@ -4,9 +4,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// TODO Check what's the overhead of adding the reverse mapping to the BBHash struct?
-// TODO check the overhead of the BBHash2 struct vs just using a slice of BBHash vs a slice of BBHash pointers vs just BBHash
-
 // BBHash2 represents a minimal perfect hash for a set of keys.
 type BBHash2 struct {
 	partitions []*BBHash
