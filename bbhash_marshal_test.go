@@ -11,10 +11,11 @@ func TestMarshalUnmarshalBBHash(t *testing.T) {
 	size := 100000
 	keys := generateKeys(size, 99)
 
-	bb, err := bbhash.NewSequential(2.0, keys)
+	bb2, err := bbhash.New(keys, bbhash.Gamma(2.0))
 	if err != nil {
 		t.Fatalf("Failed to create BBHash: %v", err)
 	}
+	bb := bb2.SinglePartition()
 
 	// Create a map to hold the original Find() results
 	originalHashIndexes := make(map[uint64]uint64, len(keys))
@@ -48,11 +49,12 @@ func BenchmarkMarshalBinaryBBHash(b *testing.B) {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
 			b.Run(fmt.Sprintf("gamma=%.1f/keys=%d", gamma, size), func(b *testing.B) {
-				bb, _ := bbhash.NewSequential(gamma, keys)
+				bb2, _ := bbhash.New(keys, bbhash.Gamma(gamma))
+				bb := bb2.SinglePartition()
 				bpk := bb.BitsPerKey()
 				dataLen := 0
 				b.ResetTimer()
-				for range b.N {
+				for b.Loop() {
 					d, err := bb.MarshalBinary()
 					if err != nil {
 						b.Fatalf("Failed to marshal BBHash: %v", err)
@@ -75,7 +77,8 @@ func BenchmarkUnmarshalBinaryBBHash(b *testing.B) {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
 			b.Run(fmt.Sprintf("gamma=%.1f/keys=%d", gamma, size), func(b *testing.B) {
-				bb, _ := bbhash.NewSequential(gamma, keys)
+				bb2, _ := bbhash.New(keys, bbhash.Gamma(gamma))
+				bb := bb2.SinglePartition()
 				bpk := bb.BitsPerKey()
 				d, err := bb.MarshalBinary()
 				if err != nil {
@@ -83,7 +86,7 @@ func BenchmarkUnmarshalBinaryBBHash(b *testing.B) {
 				}
 				dataLen := len(d)
 				b.ResetTimer()
-				for range b.N {
+				for b.Loop() {
 					newBB := &bbhash.BBHash{}
 					if err = newBB.UnmarshalBinary(d); err != nil {
 						b.Fatalf("Failed to unmarshal BBHash: %v", err)

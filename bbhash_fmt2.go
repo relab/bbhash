@@ -2,6 +2,7 @@ package bbhash
 
 import (
 	"fmt"
+	"go/format"
 	"strings"
 )
 
@@ -83,4 +84,37 @@ func (bb BBHash2) wireBits() (sz uint64) {
 		sz += sizeOfInt // to account for the offset
 	}
 	return sz
+}
+
+// BitVectors returns a Go slice for BBHash2's per-partition, per-level bit vectors.
+// This is intended for testing and debugging; no guarantees are made about the format.
+func (bb BBHash2) BitVectors(varName string) string {
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("var %s = [][][]uint64{\n", varName))
+	for partition, bx := range bb.partitions {
+		b.WriteString(fmt.Sprintf("// Partition %d:\n{\n", partition))
+		for lvl, bv := range bx.bits {
+			b.WriteString(fmt.Sprintf("// Level %d:\n{\n", lvl))
+			for _, v := range bv.v {
+				b.WriteString(fmt.Sprintf("%#016x,\n", v))
+			}
+			b.WriteString("},\n")
+		}
+		b.WriteString("},\n")
+	}
+	b.WriteString("}\n")
+	s, err := format.Source([]byte(b.String()))
+	if err != nil {
+		panic(err)
+	}
+	return string(s)
+}
+
+// LevelVectors returns a slice representation of BBHash's per-partition, per-level bit vectors.
+func (bb BBHash2) LevelVectors() [][][]uint64 {
+	var vectors [][][]uint64
+	for _, bx := range bb.partitions {
+		vectors = append(vectors, bx.LevelVectors())
+	}
+	return vectors
 }

@@ -7,53 +7,17 @@ import (
 	"github.com/relab/bbhash/internal/fast"
 )
 
-const (
-	// minimalGamma is the smallest allowed expansion factor for the bit vector.
-	minimalGamma = 0.5
-
-	// Heuristic: 32 levels should be enough for even very large key sets
-	initialLevels = 32
-
-	// Maximum number of attempts (level) at making a perfect hash function.
-	// Per the paper, each successive level exponentially reduces the
-	// probability of collision.
-	maxLevel = 200
-)
-
 // BBHash represents a minimal perfect hash for a set of keys.
 type BBHash struct {
-	bits       []*bitVector
-	ranks      []uint64
-	reverseMap []uint64 // index -> key (only filled if needed)
+	bits       []*bitVector // bit vectors for each level
+	ranks      []uint64     // total rank for each level
+	reverseMap []uint64     // index -> key (only filled if needed)
 }
 
-func newBBHash() *BBHash {
+func newBBHash(initialLevels int) *BBHash {
 	return &BBHash{
 		bits: make([]*bitVector, 0, initialLevels),
 	}
-}
-
-// NewSequential creates a new BBHash for the given keys. The keys must be unique.
-// This creates the BBHash in a single goroutine.
-// The gamma parameter is the expansion factor for the bit vector; the paper recommends
-// a value of 2.0. The larger the value the more memory will be consumed by the BBHash.
-func NewSequential(gamma float64, keys []uint64) (*BBHash, error) {
-	gamma = max(gamma, minimalGamma)
-	bb := newBBHash()
-	if err := bb.compute(gamma, keys); err != nil {
-		return nil, err
-	}
-	return bb, nil
-}
-
-// NewSequentialWithKeymap is similar to NewSequential, but in addition computes the reverse map.
-func NewSequentialWithKeymap(gamma float64, keys []uint64) (*BBHash, error) {
-	gamma = max(gamma, minimalGamma)
-	bb := newBBHash()
-	if err := bb.computeWithKeymap(gamma, keys); err != nil {
-		return nil, err
-	}
-	return bb, nil
 }
 
 // Find returns a unique index representing the key in the minimal hash set.
@@ -87,12 +51,8 @@ func (bb *BBHash) Key(index uint64) uint64 {
 }
 
 // compute computes the minimal perfect hash for the given keys.
-func (bb *BBHash) compute(gamma float64, keys []uint64) error {
+func (bb *BBHash) compute(keys []uint64, gamma float64) error {
 	sz := len(keys)
-	if sz == 0 {
-		return fmt.Errorf("bbhash: compute: no keys")
-	}
-
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
 	// bit vectors for current level : A and C in the paper
 	lvlVector := newBCVector(words(sz, gamma))
@@ -140,13 +100,14 @@ func (bb *BBHash) compute(gamma float64, keys []uint64) error {
 }
 
 // computeWithKeymap is similar to compute(), but in addition returns the reverse keymap.
-func (bb *BBHash) computeWithKeymap(gamma float64, keys []uint64) error {
+func (bb *BBHash) computeWithKeymap(keys []uint64, gamma float64) error {
 	sz := len(keys)
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
 	// bit vectors for current level : A and C in the paper
 	lvlVector := newBCVector(words(sz, gamma))
 	bb.reverseMap = make([]uint64, len(keys)+1)
-	levelKeysMap := make([][]uint64, 0, initialLevels)
+	levelKeysMap := make([][]uint64, 0, len(bb.bits)) // number of initial levels = len(bb.bits)
+
 	// loop exits when there are no more keys to re-hash (see break statement below)
 	for lvl := 0; true; lvl++ {
 		// precompute the level hash to speed up the key hashing
@@ -217,3 +178,9 @@ func (bb *BBHash) computeLevelRanks() {
 		rank += bv.onesCount()
 	}
 }
+
+// enforce interface compliance
+var (
+	_ bbhash     = (*BBHash)(nil)
+	_ reverseMap = (*BBHash)(nil)
+)

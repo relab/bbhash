@@ -8,21 +8,8 @@ import (
 	"github.com/relab/bbhash/internal/fast"
 )
 
-// NewParallel creates a new BBHash for the given keys. The keys must be unique.
-// This creates the BBHash using multiple goroutines.
-// The gamma parameter is the expansion factor for the bit vector; the paper recommends
-// a value of 2.0. The larger the value the more memory will be consumed by the BBHash.
-func NewParallel(gamma float64, keys []uint64) (*BBHash, error) {
-	gamma = max(gamma, minimalGamma)
-	bb := newBBHash()
-	if err := bb.computeParallel(gamma, keys); err != nil {
-		return nil, err
-	}
-	return bb, nil
-}
-
 // computeParallel computes the minimal perfect hash for the given keys in parallel by sharding the keys.
-func (bb *BBHash) computeParallel(gamma float64, keys []uint64) error {
+func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
 	sz := len(keys)
 	wds := words(sz, gamma)
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide

@@ -8,7 +8,7 @@ import (
 
 func ExampleBBHash_Find() {
 	keys := []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	bb, err := bbhash.NewSequential(1.5, keys)
+	bb, err := bbhash.New(keys, bbhash.Gamma(1.5))
 	if err != nil {
 		panic(err)
 	}

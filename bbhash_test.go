@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/relab/bbhash"
+	"github.com/relab/bbhash/internal/test"
 )
 
 // Default benchmark parameters.
@@ -33,7 +34,7 @@ var (
 //
 //	go test -run x -bench BenchmarkBBHashNew -benchmem -timeout=0 -count 2 -gamma=1.5,2 -partitions=1,2,4,8 -keys=1000,10000
 //	go test -run x -bench BenchmarkBBhashFind -benchmem -timeout=0 -count 2 -gamma=1.5,2 -partitions=1,2,4,8 -keys=1000,10000
-//	go test -run x -bench BenchmarkReverseMapping -benchmem -timeout=0 -count 2 -gamma=1.5,2 -keys=long
+//	go test -run x -bench BenchmarkReverseMapping -benchmem -timeout=0 -count 2 -gamma=1.5,2 -partitions=1,2,4,8 -keys=long
 func TestMain(m *testing.M) {
 	var (
 		keySizesSlice  = flag.String("keys", "", `list of number of keys to generate (use "long" for 10M, 100M, 1B)`)
@@ -84,60 +85,6 @@ func hasTimeout() bool {
 	return hasTimeout
 }
 
-// This is only meant for testing, and should not be used for benchmarking.
-type mphf interface{ Find(uint64) uint64 }
-
-type variant[T mphf] struct {
-	fn   func(gamma float64, keys []uint64) (T, error)
-	fn2  func(gamma float64, partitions int, keys []uint64) (T, error)
-	name string
-}
-
-func runMPHFTest[T mphf](t *testing.T, tt variant[T], keys []uint64, gamma float64) {
-	t.Helper()
-	// emit progress every 100k keys
-	const progressInterval = 100_000
-	size := len(keys)
-	logProgress := size > 2*progressInterval
-	t.Run(fmt.Sprintf("name=%s/gamma=%0.1f/keys=%d", tt.name, gamma, size), func(t *testing.T) {
-		var bb T
-		var err error
-		if tt.fn != nil {
-			bb, err = tt.fn(gamma, keys)
-		} else if tt.fn2 != nil {
-			bb, err = tt.fn2(gamma, 20, keys)
-		} else {
-			t.Fatal("no function to test")
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
-		if logProgress {
-			fmt.Println(bb)
-		}
-		keyMap := make(map[uint64]uint64)
-		start := time.Now()
-		for keyIndex, key := range keys {
-			if logProgress && keyIndex%progressInterval == 0 {
-				duration := time.Since(start)
-				if duration > time.Second {
-					duration = duration.Truncate(time.Second)
-					expectedTimeToFinish := time.Duration(size/progressInterval) * duration
-					t.Logf("Progress (keyIndex=%9d) Duration: %s Expect to finish in %s", keyIndex, duration, expectedTimeToFinish)
-				}
-				start = time.Now()
-			}
-
-			hashIndex := bb.Find(key)
-			checkKey(t, keyIndex, key, uint64(len(keys)), hashIndex)
-			if x, ok := keyMap[hashIndex]; ok {
-				t.Errorf("index %d already mapped to key %#x", hashIndex, x)
-			}
-			keyMap[hashIndex] = key
-		}
-	})
-}
-
 func TestSimple(t *testing.T) {
 	someStarWarsCharacters := []string{
 		"4-LOM",
@@ -175,43 +122,45 @@ func TestSimple(t *testing.T) {
 	for i, s := range someStarWarsCharacters {
 		keys[i] = fnvHash(s)
 	}
-	tests := []variant[*bbhash.BBHash]{
-		{name: "Sequential", fn: bbhash.NewSequential},
-		{name: "Parallel__", fn: bbhash.NewParallel},
-	}
-	tests2 := []variant[*bbhash.BBHash2]{
-		{name: "Parallel2_", fn2: bbhash.NewParallel2},
-	}
-	for _, tt := range tests {
-		runMPHFTest(t, tt, keys, 2.0)
-	}
-	for _, tt := range tests2 {
-		runMPHFTest(t, tt, keys, 2.0)
+	for _, g := range gammaValues {
+		t.Run(test.Name("StarWars", []string{"gamma", "keys"}, g, len(keys)), func(t *testing.T) {
+			bb, err := bbhash.New(keys, bbhash.Gamma(g))
+			if err != nil {
+				t.Fatal(err)
+			}
+			validateKeyMappings(t, bb, keys)
+		})
 	}
 }
 
 func TestManyKeys(t *testing.T) {
-	tests := []variant[*bbhash.BBHash]{
-		{name: "Sequential", fn: bbhash.NewSequential},
-		{name: "Parallel__", fn: bbhash.NewParallel},
-	}
-	tests2 := []variant[*bbhash.BBHash2]{
-		{name: "Parallel2_", fn2: bbhash.NewParallel2},
-	}
 	sizes := []int{
 		1000,
 		10_000,
 		100_000,
 	}
 	const seed = 123
-	for _, gamma := range []float64{1.1, 1.5, 2.0, 2.5, 3.0, 5.0} {
-		for _, size := range sizes {
-			keys := generateKeys(size, seed)
-			for _, tt := range tests {
-				runMPHFTest(t, tt, keys, gamma)
-			}
-			for _, tt := range tests2 {
-				runMPHFTest(t, tt, keys, gamma)
+	tcs := []struct {
+		name string
+		opts []bbhash.Options
+	}{
+		{name: "ReverseMap", opts: []bbhash.Options{bbhash.WithReverseMap()}},
+		{name: "Parallel", opts: []bbhash.Options{bbhash.Parallel()}},
+		{name: "Partitioned4", opts: []bbhash.Options{bbhash.Partitions(4)}},
+		{name: "Partitioned8", opts: []bbhash.Options{bbhash.Partitions(8)}},
+		{name: "Partitioned15", opts: []bbhash.Options{bbhash.Partitions(15)}},
+	}
+	for _, tc := range tcs {
+		for _, gamma := range []float64{1.1, 1.5, 2.0, 2.5, 3.0, 5.0} {
+			for _, size := range sizes {
+				t.Run(test.Name(tc.name, []string{"gamma", "keys"}, gamma, size), func(t *testing.T) {
+					keys := generateKeys(size, seed)
+					bb, err := bbhash.New(keys, append(tc.opts, bbhash.Gamma(gamma))...)
+					if err != nil {
+						t.Fatal(err)
+					}
+					validateKeyMappings(t, bb, keys)
+				})
 			}
 		}
 	}
@@ -228,25 +177,31 @@ func TestSlow(t *testing.T) {
 		10_000_000,
 		100_000_000,
 	}
-	tests := []variant[*bbhash.BBHash]{
-		{name: "Sequential", fn: bbhash.NewSequential},
-		{name: "Parallel__", fn: bbhash.NewParallel},
+	tcs := []struct {
+		name string
+		opts []bbhash.Options
+	}{
+		{name: "Partitioned4", opts: []bbhash.Options{bbhash.Partitions(4)}},
 	}
-	tests2 := []variant[*bbhash.BBHash2]{
-		{name: "Parallel2_", fn2: bbhash.NewParallel2},
-	}
-	for _, size := range sizes {
-		keys := generateKeys(size, 99)
-		for _, tt := range tests {
-			runMPHFTest(t, tt, keys, 2.0)
-		}
-		for _, tt := range tests2 {
-			runMPHFTest(t, tt, keys, 2.0)
+	const gamma = 2.0
+	for _, tc := range tcs {
+		for _, size := range sizes {
+			t.Run(test.Name(tc.name, []string{"gamma", "keys"}, gamma, size), func(t *testing.T) {
+				keys := generateKeys(size, 99)
+				bb, err := bbhash.New(keys, append(tc.opts, bbhash.Gamma(gamma))...)
+				if err != nil {
+					t.Fatal(err)
+				}
+				validateKeyMappings(t, bb, keys)
+			})
 		}
 	}
 }
 
-func getKeymap(keys []uint64, bb *bbhash.BBHash) []uint64 {
+// getReverseMap returns a reverse map from indices to keys.
+// The reverse map is built by calling Find for each key.
+// This is used to compare the reverse map built by WithReverseMap option.
+func getReverseMap(keys []uint64, bb mphf) []uint64 {
 	keyMap := make([]uint64, len(keys)+1)
 	for _, key := range keys {
 		hashIndex := bb.Find(key)
@@ -255,7 +210,7 @@ func getKeymap(keys []uint64, bb *bbhash.BBHash) []uint64 {
 	return keyMap
 }
 
-// TestReverseMapping checks that the reverse map returned from NewSequentialWithKeymap is correct.
+// TestReverseMapping checks that the reverse map returned from New(WithReverseMap) is correct.
 // First it builds a reverse map the slow way, then it builds a reverse map the fast way.
 // Then it compares the two maps.
 func TestReverseMapping(t *testing.T) {
@@ -263,90 +218,90 @@ func TestReverseMapping(t *testing.T) {
 		1000,
 		10_000,
 		100_000,
-		1_000_000,
 	}
 	for _, size := range sizes {
 		keys := generateKeys(int(size), 99)
-		for _, gamma := range []float64{0.5, 1.1, 1.5, 2.0} {
-			t.Run(fmt.Sprintf("gamma=%.1f/keys=%d", gamma, size), func(t *testing.T) {
-				// Build a reverse map with NewSequential+Find.
-				bb, err := bbhash.NewSequential(gamma, keys)
-				if err != nil {
-					t.Error(err)
-				}
-				keymap := getKeymap(keys, bb)
-
-				// Build a reverse map with NewSequentialWithKeymap.
-				bm, err := bbhash.NewSequentialWithKeymap(gamma, keys)
-				if err != nil {
-					t.Error(err)
-				}
-
-				// Check that the two keymaps are equal.
-				for i := range size {
-					if bm.Key(i) != keymap[i] {
-						// Show only the high 16 bits of the key.
-						t.Errorf("bm.Key(%d) = %x, want %x", i, bm.Key(i)>>48, keymap[i]>>48)
+		for _, gamma := range []float64{0.5, 1.5, 2.0} {
+			for _, partitions := range []int{1, 2, 3, 5, 20} {
+				t.Run(test.Name("Params", []string{"gamma", "partitions", "keys"}, gamma, partitions, size), func(t *testing.T) {
+					bb, err := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
+					if err != nil {
+						t.Error(err)
 					}
-				}
+					// Build the reverse map using Find.
+					reverseMap := getReverseMap(keys, bb)
 
-				// Check that Key() returns the correct key for the boundary indices.
-				tests := []struct {
-					index    uint64
-					wantZero bool
-				}{
-					{0, true},
-					{1, false},
-					{size - 1, false},
-					{size, false},
-					{size + 1, true},
-				}
-				for _, test := range tests {
-					if got := bm.Key(test.index); (got == 0) != test.wantZero {
-						t.Errorf("bm.Key(%d) = %x, want %v", test.index, got>>48, test.wantZero)
+					// Build the reverse map directly using WithReverseMap option.
+					bm, err := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions), bbhash.WithReverseMap())
+					if err != nil {
+						t.Error(err)
 					}
-				}
-			})
+
+					// Check that the two reverse maps are equal.
+					for i := range size {
+						if bm.Key(i) != reverseMap[i] {
+							// Show only the high 16 bits of the key.
+							t.Errorf("bm.Key(%d) = %x, want %x", i, bm.Key(i)>>48, reverseMap[i]>>48)
+						}
+					}
+
+					// Check that Key() returns the correct key for the boundary indices.
+					tests := []struct {
+						index    uint64
+						wantZero bool
+					}{
+						{0, true},
+						{1, false},
+						{size - 1, false},
+						{size, false},
+						{size + 1, true},
+					}
+					for _, test := range tests {
+						if got := bm.Key(test.index); (got == 0) != test.wantZero {
+							t.Errorf("bm.Key(%d) = %x, want %v", test.index, got>>48, test.wantZero)
+						}
+					}
+				})
+			}
 		}
 	}
 }
 
 // BenchmarkReverseMapping benchmarks the speed of building a reverse map.
-// The original implementation using NewSequential+Find is very slow;
+// The original implementation using New(Sequential)+Find is very slow;
 // with 10_000_000 keys it takes more than 13 hours on a Mac Studio M2 Max 64GB.
-// The NewSequentialWithKeymap with 1_000_000_000 keys takes less than 6 minutes.
+// The New(WithReverseMap) with 1_000_000_000 keys takes less than 6 minutes.
 //
 //	go test -run x -bench BenchmarkReverseMapping -benchmem -timeout=0 -count 1 > reverse.txt
 func BenchmarkReverseMapping(b *testing.B) {
 	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
-			b.Run(fmt.Sprintf("NewSequentialWithKeymap/gamma=%.1f/keys=%d", gamma, size), func(b *testing.B) {
-				for range b.N {
-					bb, _ = bbhash.NewSequentialWithKeymap(gamma, keys)
-				}
-			})
+			for _, partitions := range partitionValues {
+				name := test.Name("New(WithReverseMap)", []string{"gamma", "partitions", "keys"}, gamma, partitions, size)
+				b.Run(name, func(b *testing.B) {
+					for b.Loop() {
+						bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions), bbhash.WithReverseMap())
+					}
+				})
 
-			if size > 1_000_000 {
-				continue // Skip the NewSequential+Find benchmark for large sizes; it's too slow.
-			}
-			b.Run(fmt.Sprintf("NewSequential+Find/gamma=%.1f/keys=%d", gamma, size), func(b *testing.B) {
-				for range b.N {
-					bb, _ = bbhash.NewSequential(gamma, keys)
-					keymap = getKeymap(keys, bb)
+				if size > 1_000_000 {
+					continue // Skip the New(Sequential)+Find benchmark for large sizes; it's too slow.
 				}
-			})
+				name = test.Name("New(Sequential)+Find", []string{"gamma", "partitions", "keys"}, gamma, partitions, size)
+				b.Run(name, func(b *testing.B) {
+					for b.Loop() {
+						bb, _ := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
+						getReverseMap(keys, bb)
+					}
+				})
+			}
 		}
 	}
 }
 
-var (
-	keymap []uint64
-	bb     *bbhash.BBHash
-)
-
 // BenchmarkBBHashNew benchmarks the construction of a new BBHash using
-// sequential and parallel variants. This will take a long time to run,
+// sequential and partition variants. This will take a long time to run,
 // especially if you enable large sizes. Thus, to avoid timeouts, you
 // should run this with a -timeout=0 argument.
 //
@@ -369,14 +324,13 @@ func BenchmarkBBHashNew(b *testing.B) {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
 			for _, partitions := range partitionValues {
-				b.Run(fmt.Sprintf("gamma=%.1f/partitions=%3d/keys=%d", gamma, partitions, size), func(b *testing.B) {
-					// Note: when partitions is 1, New invokes NewSequential indirectly.
-					// This might be slightly slower than using NewSequential directly.
-					bb, _ := bbhash.New(gamma, partitions, keys)
+				name := test.Name("Params", []string{"gamma", "partitions", "keys"}, gamma, partitions, size)
+				b.Run(name, func(b *testing.B) {
+					bb, _ := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
 					bpk := bb.BitsPerKey()
 					b.ResetTimer()
-					for range b.N {
-						bb, _ = bbhash.New(gamma, partitions, keys)
+					for b.Loop() {
+						bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
 					}
 					// This metric is always the same for a given set of keys.
 					b.ReportMetric(bpk, "bits/key")
@@ -391,11 +345,12 @@ func BenchmarkBBHashFind(b *testing.B) {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
 			for _, partitions := range partitionValues {
-				b.Run(fmt.Sprintf("gamma=%.1f/partitions=%3d/keys=%d", gamma, partitions, size), func(b *testing.B) {
-					bb, _ := bbhash.New(gamma, partitions, keys)
+				name := test.Name("Params", []string{"gamma", "partitions", "keys"}, gamma, partitions, size)
+				b.Run(name, func(b *testing.B) {
+					bb, _ := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
 					bpk := bb.BitsPerKey()
 					b.ResetTimer()
-					for range b.N {
+					for b.Loop() {
 						for _, k := range keys {
 							if bb.Find(k) == 0 {
 								b.Fatalf("can't find the key: %#x", k)
@@ -429,15 +384,16 @@ func BenchmarkGammaLevels(b *testing.B) {
 	for _, size := range keySizes {
 		for _, gamma := range gammaValues {
 			for _, partitions := range partitionValues {
-				b.Run(fmt.Sprintf("gamma=%.1f/partitions=%3d/keys=%d", gamma, partitions, size), func(b *testing.B) {
+				name := test.Name("Params", []string{"gamma", "partitions", "keys"}, gamma, partitions, size)
+				b.Run(name, func(b *testing.B) {
 					keys := generateKeys(size, 99)
-					maxBB, _ := bbhash.New(gamma, partitions, keys)
+					maxBB, _ := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
 					maxLvl, _ := maxBB.MaxMinLevels()
 					maxLvlSeed := 0
 					for seed := range keysToSeeds(size) {
 						keys := generateKeys(size, seed)
-						for range b.N {
-							bb, _ := bbhash.New(gamma, partitions, keys)
+						for b.Loop() {
+							bb, _ := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
 							lvl, _ := bb.MaxMinLevels()
 							if lvl > maxLvl {
 								maxBB, maxLvl, maxLvlSeed = bb, lvl, seed
@@ -509,13 +465,38 @@ func parseSlice[T float64 | int](s string) ([]T, error) {
 	return slice, nil
 }
 
-func checkKey(t *testing.T, keyIndex int, key, entries, hashIndex uint64) {
+// mphf provides an interface to find keys in a minimal perfect hash function.
+// This is only meant for testing, and should not be used for benchmarking.
+type mphf interface{ Find(uint64) uint64 }
+
+// validateKeyMappings checks that the keys are correctly mapped to the indices.
+// It also checks that the indices are unique.
+// This check can be slow for large key sets.
+func validateKeyMappings(t *testing.T, bb mphf, keys []uint64) {
 	t.Helper()
-	if hashIndex == 0 {
-		t.Fatalf("can't find key: %#x", key)
-	}
-	if hashIndex > entries {
-		t.Fatalf("key %d <%#x> mapping %d out-of-bounds", keyIndex, key, hashIndex)
+
+	const progressInterval = 5 * time.Second
+	nextLogTime := time.Now().Add(progressInterval)
+
+	entries := uint64(len(keys))
+	keyMap := make(map[uint64]uint64, entries)
+	for keyIndex, key := range keys {
+		if time.Now().After(nextLogTime) {
+			t.Logf("%d keys checked so far", keyIndex)
+			nextLogTime = time.Now().Add(progressInterval)
+		}
+
+		hashIndex := bb.Find(key)
+		if hashIndex == 0 {
+			t.Fatalf("can't find key: %#x", key)
+		}
+		if hashIndex > entries {
+			t.Fatalf("key %d <%#x> mapping %d out-of-bounds", keyIndex, key, hashIndex)
+		}
+		if x, ok := keyMap[hashIndex]; ok {
+			t.Errorf("index %d already mapped to key %#x", hashIndex, x)
+		}
+		keyMap[hashIndex] = key
 	}
 }
 

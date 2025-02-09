@@ -35,6 +35,7 @@ pkill
 Rayan
 relab
 Revan
+reversemap
 Rizk
 Skywalker
 struct
