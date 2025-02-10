@@ -14,8 +14,8 @@ type BBHash struct {
 	reverseMap []uint64    // index -> key (only filled if needed)
 }
 
-func newBBHash(initialLevels int) *BBHash {
-	return &BBHash{
+func newBBHash(initialLevels int) BBHash {
+	return BBHash{
 		bits: make([]bitVector, 0, initialLevels),
 	}
 }
@@ -31,7 +31,7 @@ func newBBHash(initialLevels int) *BBHash {
 // If the key is not in the original key set, two things can happen:
 // 1. The return value is 0, representing that the key was not in the original key set.
 // 2. The return value is in the expected range [1, len(keys)], but is a false positive.
-func (bb *BBHash) Find(key uint64) uint64 {
+func (bb BBHash) Find(key uint64) uint64 {
 	for lvl, bv := range bb.bits {
 		i := fast.Hash(uint64(lvl), key) % bv.size()
 		if bv.isSet(i) {
@@ -43,7 +43,7 @@ func (bb *BBHash) Find(key uint64) uint64 {
 
 // Key returns the key for the given index.
 // The index must be in the range [1, len(keys)], otherwise 0 is returned.
-func (bb *BBHash) Key(index uint64) uint64 {
+func (bb BBHash) Key(index uint64) uint64 {
 	if bb.reverseMap == nil || index == 0 || int(index) >= len(bb.reverseMap) {
 		return 0
 	}
