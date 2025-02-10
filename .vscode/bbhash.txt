@@ -1,4 +1,5 @@
 alloc
+Appender
 bbchain
 bbhash
 bbhashbench
