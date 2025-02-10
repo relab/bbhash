@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-// MarshalBinary implements the encoding.BinaryMarshaler interface.
+// MarshalBinary implements the [encoding.BinaryMarshaler] interface.
 func (bb BBHash) MarshalBinary() ([]byte, error) {
 	// Header: 1 x 64-bit words:
 	//   n - number of bit vectors (= number of levels)
@@ -17,7 +17,7 @@ func (bb BBHash) MarshalBinary() ([]byte, error) {
 
 	numBitVectors := uint64(len(bb.bits))
 	if numBitVectors == 0 {
-		return nil, errors.New("BBHash.MarshalBinary: invalid length")
+		return nil, errors.New("BBHash.MarshalBinary: no data")
 	}
 
 	// Write header
@@ -38,11 +38,12 @@ func (bb BBHash) MarshalBinary() ([]byte, error) {
 
 	// We don't store the rank vector, since we can re-compute it
 	// when we unmarshal the bit vectors.
+	// We also don't include the reverse map; it is not meant to be serialized.
 
 	return buf.Bytes(), nil
 }
 
-// UnmarshalBinary implements the encoding.BinaryUnmarshaler interface.
+// UnmarshalBinary implements the [encoding.BinaryUnmarshaler] interface.
 func (bb *BBHash) UnmarshalBinary(data []byte) error {
 	// Make a copy of data, since we will be modifying buf's slice indices
 	buf := data
@@ -56,12 +57,12 @@ func (bb *BBHash) UnmarshalBinary(data []byte) error {
 		return fmt.Errorf("BBHash.UnmarshalBinary: invalid number of bit vectors %d (max %d)", numBitVectors, maxLevel)
 	}
 	*bb = BBHash{} // Not strictly necessary, but seems to be recommended practice
-	bb.bits = make([]*bitVector, numBitVectors)
+	bb.bits = make([]bitVector, numBitVectors)
 	buf = buf[8:] // Move past header
 
 	// Read bit vectors for each level
 	for i := uint64(0); i < numBitVectors; i++ {
-		bv := &bitVector{}
+		bv := bitVector{}
 		if err := bv.UnmarshalBinary(buf); err != nil {
 			return err
 		}

@@ -95,7 +95,7 @@ func (bb BBHash2) BitVectors(varName string) string {
 		b.WriteString(fmt.Sprintf("// Partition %d:\n{\n", partition))
 		for lvl, bv := range bx.bits {
 			b.WriteString(fmt.Sprintf("// Level %d:\n{\n", lvl))
-			for _, v := range bv.v {
+			for _, v := range bv {
 				b.WriteString(fmt.Sprintf("%#016x,\n", v))
 			}
 			b.WriteString("},\n")

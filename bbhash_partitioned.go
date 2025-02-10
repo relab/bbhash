@@ -6,7 +6,7 @@ import (
 
 // BBHash2 represents a minimal perfect hash for a set of keys.
 type BBHash2 struct {
-	partitions []*BBHash
+	partitions []BBHash
 	offsets    []int
 }
 
@@ -41,7 +41,7 @@ func New(keys []uint64, opts ...Options) (*BBHash2, error) {
 			return nil, err
 		}
 		return &BBHash2{
-			partitions: []*BBHash{bb},
+			partitions: []BBHash{bb},
 			offsets:    []int{0},
 		}, nil
 	}
@@ -60,7 +60,7 @@ func newPartitioned(keys []uint64, o *options) (*BBHash2, error) {
 		partitionKeys[i] = append(partitionKeys[i], k)
 	}
 	bb := &BBHash2{
-		partitions: make([]*BBHash, o.partitions),
+		partitions: make([]BBHash, o.partitions),
 		offsets:    make([]int, o.partitions),
 	}
 	grp := &errgroup.Group{}
@@ -92,14 +92,14 @@ func newPartitioned(keys []uint64, o *options) (*BBHash2, error) {
 // If the key is not in the original key set, two things can happen:
 // 1. The return value is 0, representing that the key was not in the original key set.
 // 2. The return value is in the expected range [1, len(keys)], but is a false positive.
-func (bb *BBHash2) Find(key uint64) uint64 {
+func (bb BBHash2) Find(key uint64) uint64 {
 	i := key % uint64(len(bb.partitions))
 	return bb.partitions[i].Find(key) + uint64(bb.offsets[i])
 }
 
 // Key returns the key for the given index.
 // The index must be in the range [1, len(keys)], otherwise 0 is returned.
-func (bb *BBHash2) Key(index uint64) uint64 {
+func (bb BBHash2) Key(index uint64) uint64 {
 	for _, b := range bb.partitions {
 		if index < uint64(len(b.reverseMap)) {
 			return b.reverseMap[index]
@@ -111,15 +111,15 @@ func (bb *BBHash2) Key(index uint64) uint64 {
 
 // Partitions returns the number of partitions in the BBHash2.
 // This is mainly useful for testing and may be removed in the future.
-func (bb *BBHash2) Partitions() int {
+func (bb BBHash2) Partitions() int {
 	return len(bb.partitions)
 }
 
 // SinglePartition returns the underlying BBHash if it contains a single partition.
 // If there are multiple partitions, it returns nil.
-func (bb *BBHash2) SinglePartition() *BBHash {
+func (bb BBHash2) SinglePartition() *BBHash {
 	if len(bb.partitions) == 1 {
-		return bb.partitions[0]
+		return &bb.partitions[0]
 	}
 	return nil
 }
