@@ -1,46 +1,48 @@
 package bbhash
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
 )
 
-// MarshalBinary implements the [encoding.BinaryMarshaler] interface.
-func (bb BBHash) MarshalBinary() ([]byte, error) {
-	// Header: 1 x 64-bit words:
-	//   n - number of bit vectors (= number of levels)
-	//
-	// Body:
-	//   <n> bit vectors laid out consecutively
+func (bb BBHash) marshaledLength() int {
+	words := 1 // one word for header
+	for _, bv := range bb.bits {
+		words += int(bv.words())
+	}
+	return uint64bytes * words
+}
 
+// AppendBinary implements the [encoding.BinaryAppender] interface.
+func (bb BBHash) AppendBinary(buf []byte) ([]byte, error) {
+	// number of bit vectors (= number of levels)
 	numBitVectors := uint64(len(bb.bits))
 	if numBitVectors == 0 {
-		return nil, errors.New("BBHash.MarshalBinary: no data")
+		return nil, errors.New("BBHash.AppendBinary: no data")
 	}
+	// append header: the number of bit vectors
+	buf = binary.LittleEndian.AppendUint64(buf, numBitVectors)
 
-	// Write header
-	var buf bytes.Buffer
-	if err := binary.Write(&buf, binary.LittleEndian, numBitVectors); err != nil {
-		return nil, err
-	}
-	// Write bit vectors for each level
+	var err error
+	// append the bit vector for each level
 	for _, bv := range bb.bits {
-		b, err := bv.MarshalBinary()
+		buf, err = bv.AppendBinary(buf)
 		if err != nil {
 			return nil, err
 		}
-		if _, err := buf.Write(b); err != nil {
-			return nil, err
-		}
 	}
 
-	// We don't store the rank vector, since we can re-compute it
+	// We don't append the rank vector, since we can re-compute it
 	// when we unmarshal the bit vectors.
-	// We also don't include the reverse map; it is not meant to be serialized.
+	// Similarly, the reverse map it is not meant to be serialized.
 
-	return buf.Bytes(), nil
+	return buf, nil
+}
+
+// MarshalBinary implements the [encoding.BinaryMarshaler] interface.
+func (bb BBHash) MarshalBinary() ([]byte, error) {
+	return bb.AppendBinary(make([]byte, 0, bb.marshaledLength()))
 }
 
 // UnmarshalBinary implements the [encoding.BinaryUnmarshaler] interface.

@@ -43,8 +43,8 @@ func TestMarshalUnmarshalBBHash(t *testing.T) {
 }
 
 // Run with:
-// go test -run x -bench BenchmarkMarshalBinaryBBHash -benchmem
-func BenchmarkMarshalBinaryBBHash(b *testing.B) {
+// go test -run x -bench BenchmarkBBHashMarshalBinary -benchmem
+func BenchmarkBBHashMarshalBinary(b *testing.B) {
 	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
@@ -64,15 +64,15 @@ func BenchmarkMarshalBinaryBBHash(b *testing.B) {
 				// This metric is always the same for a given set of keys.
 				b.ReportMetric(bpk, "bits/key")
 				// This metric correspond to bits/key: dataLen*8/len(keys)
-				b.ReportMetric(float64(dataLen)/float64(b.N), "bytes/msg")
+				b.ReportMetric(float64(dataLen)/float64(b.N), "B/msg")
 			})
 		}
 	}
 }
 
 // Run with:
-// go test -run x -bench BenchmarkUnmarshalBinaryBBHash -benchmem
-func BenchmarkUnmarshalBinaryBBHash(b *testing.B) {
+// go test -run x -bench BenchmarkBBHashUnmarshalBinary -benchmem
+func BenchmarkBBHashUnmarshalBinary(b *testing.B) {
 	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
@@ -99,7 +99,7 @@ func BenchmarkUnmarshalBinaryBBHash(b *testing.B) {
 				// This metric is always the same for a given set of keys.
 				b.ReportMetric(bpk, "bits/key")
 				// This metric correspond to bits/key: dataLen*8/len(keys)
-				b.ReportMetric(float64(dataLen), "bytes/msg")
+				b.ReportMetric(float64(dataLen), "B/msg")
 			})
 		}
 	}
