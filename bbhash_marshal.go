@@ -49,21 +49,22 @@ func (bb BBHash) MarshalBinary() ([]byte, error) {
 func (bb *BBHash) UnmarshalBinary(data []byte) error {
 	// Make a copy of data, since we will be modifying buf's slice indices
 	buf := data
-	if len(buf) < 8 {
+	if len(buf) < uint64bytes {
 		return errors.New("BBHash.UnmarshalBinary: no data")
 	}
 
-	// Read header
-	numBitVectors := binary.LittleEndian.Uint64(buf[:8])
+	// Read header: the number of bit vectors
+	numBitVectors := binary.LittleEndian.Uint64(buf[:uint64bytes])
 	if numBitVectors == 0 || numBitVectors > maxLevel {
 		return fmt.Errorf("BBHash.UnmarshalBinary: invalid number of bit vectors %d (max %d)", numBitVectors, maxLevel)
 	}
-	*bb = BBHash{} // Not strictly necessary, but seems to be recommended practice
+
+	*bb = BBHash{} // modify bb in place
 	bb.bits = make([]bitVector, numBitVectors)
-	buf = buf[8:] // Move past header
+	buf = buf[uint64bytes:] // move past header
 
 	// Read bit vectors for each level
-	for i := uint64(0); i < numBitVectors; i++ {
+	for i := range numBitVectors {
 		bv := bitVector{}
 		if err := bv.UnmarshalBinary(buf); err != nil {
 			return err
@@ -73,7 +74,7 @@ func (bb *BBHash) UnmarshalBinary(data []byte) error {
 		if len(buf) < bvLen {
 			return errors.New("BBHash.UnmarshalBinary: insufficient data for remaining bit vectors")
 		}
-		buf = buf[bvLen:] // Move past the current bit vector
+		buf = buf[bvLen:] // move past the current bit vector
 	}
 
 	bb.computeLevelRanks()

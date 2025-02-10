@@ -47,7 +47,7 @@ func (b *bitVector) UnmarshalBinary(data []byte) error {
 	buf = buf[uint64bytes:]
 
 	// Read the bit vector entries
-	for i := uint64(0); i < words; i++ {
+	for i := range words {
 		if len(buf) < uint64bytes {
 			return errors.New("bitVector.UnmarshalBinary: not enough data to read bit vector entry")
 		}
