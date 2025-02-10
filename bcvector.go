@@ -31,8 +31,8 @@ func (b *bcVector) reset(words uint64) {
 	clear(b.v)
 }
 
-func (b *bcVector) bitVector() *bitVector {
-	return &bitVector{v: b.v}
+func (b *bcVector) bitVector() bitVector {
+	return bitVector(b.v)
 }
 
 // size returns the number of bits this bit vector has allocated.

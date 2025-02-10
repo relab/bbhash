@@ -124,7 +124,7 @@ func (bb BBHash) BitVectors(size int) string {
 	b.WriteString(fmt.Sprintf("var bitVectors%d = [][]uint64{\n", size))
 	for lvl, bv := range bb.bits {
 		b.WriteString(fmt.Sprintf("// Level %d:\n{\n", lvl))
-		for _, v := range bv.v {
+		for _, v := range bv {
 			b.WriteString(fmt.Sprintf("%#016x,\n", v))
 		}
 		b.WriteString("},\n")
@@ -141,8 +141,8 @@ func (bb BBHash) BitVectors(size int) string {
 func (bb BBHash) LevelVectors() [][]uint64 {
 	m := make([][]uint64, 0, len(bb.bits))
 	for _, bv := range bb.bits {
-		m = append(m, make([]uint64, len(bv.v)))
-		copy(m[len(m)-1], bv.v)
+		m = append(m, make([]uint64, len(bv)))
+		copy(m[len(m)-1], bv)
 	}
 	return m
 }

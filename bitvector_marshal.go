@@ -7,13 +7,13 @@ import (
 )
 
 // marshaledLength returns the number of bytes needed to marshal the bit vector.
-func (b *bitVector) marshaledLength() int {
+func (b bitVector) marshaledLength() int {
 	const uint64bytes = 8
-	return uint64bytes * (1 + len(b.v))
+	return uint64bytes * (1 + len(b))
 }
 
-// MarshalBinary implements the encoding.BinaryMarshaler interface.
-func (b *bitVector) MarshalBinary() ([]byte, error) {
+// MarshalBinary implements the [encoding.BinaryMarshaler] interface.
+func (b bitVector) MarshalBinary() ([]byte, error) {
 	out := make([]byte, b.marshaledLength())
 	// Make a copy of out, since we will be modifying buf's slice indices
 	buf := out
@@ -23,7 +23,7 @@ func (b *bitVector) MarshalBinary() ([]byte, error) {
 	buf = buf[8:]
 
 	// Write the bit vector entries to the out buffer
-	for _, v := range b.v {
+	for _, v := range b {
 		binary.LittleEndian.PutUint64(buf[:8], v)
 		buf = buf[8:]
 	}
@@ -31,7 +31,7 @@ func (b *bitVector) MarshalBinary() ([]byte, error) {
 	return out, nil
 }
 
-// UnmarshalBinary implements the encoding.BinaryUnmarshaler interface.
+// UnmarshalBinary implements the [encoding.BinaryUnmarshaler] interface.
 func (b *bitVector) UnmarshalBinary(data []byte) error {
 	// Make a copy of data, since we will be modifying buf's slice indices
 	buf := data
@@ -45,7 +45,7 @@ func (b *bitVector) UnmarshalBinary(data []byte) error {
 		return fmt.Errorf("bitVector.UnmarshalBinary: invalid length %d", words)
 	}
 
-	b.v = make([]uint64, words)
+	*b = make(bitVector, words) // modify b in place
 	buf = buf[8:]
 
 	// Read the bit vector entries
@@ -53,7 +53,7 @@ func (b *bitVector) UnmarshalBinary(data []byte) error {
 		if len(buf) < 8 {
 			return errors.New("bitVector.UnmarshalBinary: not enough data to read bit vector entry")
 		}
-		b.v[i] = binary.LittleEndian.Uint64(buf[:8])
+		(*b)[i] = binary.LittleEndian.Uint64(buf[:8])
 		buf = buf[8:]
 	}
 
