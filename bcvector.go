@@ -2,15 +2,15 @@ package bbhash
 
 // bcVector represents a combined bit and collision vector.
 type bcVector struct {
-	v []uint64
-	c []uint64
+	v bitVector
+	c bitVector
 }
 
 // newBCVector returns a combined bit and collision vector with the given number of words.
 func newBCVector(words uint64) *bcVector {
 	return &bcVector{
-		v: make([]uint64, words),
-		c: make([]uint64, words),
+		v: make(bitVector, words),
+		c: make(bitVector, words),
 	}
 }
 
@@ -19,7 +19,7 @@ func newBCVector(words uint64) *bcVector {
 func (b *bcVector) nextLevel(words uint64) {
 	b.c = b.c[:words]
 	clear(b.c)
-	b.v = make([]uint64, words)
+	b.v = make(bitVector, words)
 }
 
 // reset resizes the bit and collision vector to the given number of words,
@@ -32,7 +32,7 @@ func (b *bcVector) reset(words uint64) {
 }
 
 func (b *bcVector) bitVector() bitVector {
-	return bitVector(b.v)
+	return b.v
 }
 
 // size returns the number of bits this bit vector has allocated.
