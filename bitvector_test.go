@@ -6,7 +6,7 @@ import (
 
 func TestSetIsSet(t *testing.T) {
 	const words = 50
-	bv := newBitVector(words)
+	bv := make(bitVector, words)
 
 	for i := uint64(0); i < bv.size(); i++ {
 		if bv.isSet(i) {

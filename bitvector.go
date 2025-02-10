@@ -9,11 +9,6 @@ import (
 // bitVector represents a bit vector in an efficient manner.
 type bitVector []uint64
 
-// newBitVector creates a bit vector with the given number of words.
-func newBitVector(words uint64) bitVector {
-	return make(bitVector, words)
-}
-
 // words returns the number of words the bit vector needs to hold size bits, with expansion factor gamma.
 func words(size int, gamma float64) uint64 {
 	sz := uint64(float64(size) * gamma)
