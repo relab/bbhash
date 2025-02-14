@@ -16,7 +16,7 @@ const (
 	maxLevel = 255
 
 	// Maximum number of partitions.
-	maxPartitions = 256
+	maxPartitions = 255
 )
 
 type options struct {
