@@ -16,10 +16,10 @@ import (
 
 func main() {
 	var (
-		name       = flag.String("name", "seq", "name of the mphf to benchmark (seq, par, par2)")
+		name       = flag.String("name", "seq", "name of the mphf to benchmark (seq, parallel, partitioned)")
 		gamma      = flag.Float64("gamma", 2.0, "gamma parameter")
 		keys       = flag.Int("keys", -1, "number of keys to use (default: runs over a range of keys; can take a long time)")
-		partitions = flag.Int("partitions", 1, "number of partitions to use (for par2 only)")
+		partitions = flag.Int("partitions", 1, "number of partitions to use (for partitioned only)")
 		count      = flag.Int("count", 1, "number of times to run the benchmark")
 	)
 	flag.Parse()
@@ -55,10 +55,10 @@ func run(name string, keys int, gamma float64, count, partitions int) ([]time.Du
 	switch name {
 	case "seq":
 		return runSequential(keys, gamma, count)
-	case "par":
+	case "parallel":
 		return runParallel(keys, gamma, count)
-	case "par2":
-		return runParallel2(keys, partitions, gamma, count)
+	case "partitioned":
+		return runPartitioned(keys, partitions, gamma, count)
 	default:
 		panic("unknown mphf name")
 	}
@@ -140,7 +140,7 @@ func runParallel(numKeys int, gamma float64, count int) ([]time.Duration, []time
 	return elapsed, findAll(bb, keys, count), max, bb.BitsPerKey()
 }
 
-func runParallel2(numKeys, numPartitions int, gamma float64, count int) ([]time.Duration, []time.Duration, int, float64) {
+func runPartitioned(numKeys, numPartitions int, gamma float64, count int) ([]time.Duration, []time.Duration, int, float64) {
 	keys := generateKeys(numKeys, 99)
 	var bb *bbhash.BBHash2
 	var err error
@@ -153,7 +153,7 @@ func runParallel2(numKeys, numPartitions int, gamma float64, count int) ([]time.
 			panic(err)
 		}
 	}
-	fmt.Println("Parallel2:", bb)
+	fmt.Println("Partitioned:", bb)
 	// We return only the max level for now
 	max, _ := bb.MaxMinLevels()
 	return elapsed, findAll(bb, keys, count), max, bb.BitsPerKey()
