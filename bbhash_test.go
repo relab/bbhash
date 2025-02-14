@@ -280,7 +280,7 @@ func BenchmarkReverseMapping(b *testing.B) {
 			for _, partitions := range partitionValues {
 				b.Run(test.Name("New(WithReverseMap)", []string{"gamma", "partitions", "keys"}, gamma, partitions, size), func(b *testing.B) {
 					for b.Loop() {
-						bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions), bbhash.WithReverseMap())
+						_, _ = bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions), bbhash.WithReverseMap())
 					}
 				})
 
@@ -327,7 +327,7 @@ func BenchmarkBBHashNew(b *testing.B) {
 					bpk := bb.BitsPerKey()
 					b.ResetTimer()
 					for b.Loop() {
-						bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
+						_, _ = bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
 					}
 					// This metric is always the same for a given set of keys.
 					b.ReportMetric(bpk, "bits/key")

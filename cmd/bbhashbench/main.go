@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"sort"
@@ -35,7 +36,10 @@ func main() {
 		bitsPerKey[numKeys] = bpk
 	}
 	filename := fmt.Sprintf("bbhash-%s-gamma-%.1f-partitions-%d.csv", *name, *gamma, *partitions)
-	writeCSVFile(filename, perKeyElapsed, perKeyElapsedFind, levels, bitsPerKey)
+	err := writeCSVFile(filename, perKeyElapsed, perKeyElapsedFind, levels, bitsPerKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func keyRange(keys *int) []int {

@@ -129,7 +129,7 @@ func BenchmarkBBHashMarshalBinary(b *testing.B) {
 
 				b.ResetTimer()
 				for b.Loop() {
-					bb.MarshalBinary()
+					_, _ = bb.MarshalBinary()
 				}
 				// This metric is always the same for a given set of keys.
 				b.ReportMetric(bpk, "bits/key")
@@ -167,7 +167,7 @@ func BenchmarkBBHashUnmarshalBinary(b *testing.B) {
 
 				b.ResetTimer()
 				for b.Loop() {
-					newBB.UnmarshalBinary(data)
+					_ = newBB.UnmarshalBinary(data)
 				}
 				// This metric is always the same for a given set of keys.
 				b.ReportMetric(bpk, "bits/key")
@@ -196,7 +196,7 @@ func BenchmarkBBHash2MarshalBinary(b *testing.B) {
 
 					b.ResetTimer()
 					for b.Loop() {
-						bb.MarshalBinary()
+						_, _ = bb.MarshalBinary()
 					}
 					// This metric is always the same for a given set of keys.
 					b.ReportMetric(bpk, "bits/key")
@@ -235,7 +235,7 @@ func BenchmarkBBHash2UnmarshalBinary(b *testing.B) {
 
 					b.ResetTimer()
 					for b.Loop() {
-						newBB.UnmarshalBinary(data)
+						_ = newBB.UnmarshalBinary(data)
 					}
 					// This metric is always the same for a given set of keys.
 					b.ReportMetric(bpk, "bits/key")
