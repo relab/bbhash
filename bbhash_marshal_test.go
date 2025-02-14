@@ -257,9 +257,9 @@ func BenchmarkBBHash2BitsPerKey(b *testing.B) {
 		for _, gamma := range gammaValues {
 			for _, partitions := range partitionValues {
 				b.Run(test.Name("", []string{"gamma", "partitions", "keys"}, gamma, partitions, size), func(b *testing.B) {
-					//lint:ignore SA3001 only need to run once since we measuring deterministic output
+					//lint:ignore SA3001 only need to run once since we are measuring deterministic output
 					b.N = 1
-					// Start the benchmark timer to measure only the bits/key calculation
+					// Stop the benchmark timer since we measure only the bits/key calculation
 					b.StopTimer()
 
 					bb, _ := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
