@@ -40,16 +40,16 @@ func (b *bitVector) UnmarshalBinary(data []byte) error {
 	// Read the number of words in the bit vector
 	words := binary.LittleEndian.Uint64(buf[:uint64bytes])
 	if words == 0 || words > (1<<32) {
-		return fmt.Errorf("bitVector.UnmarshalBinary: invalid length %d", words)
+		return fmt.Errorf("bitVector.UnmarshalBinary: invalid bit vector length %d (max %d)", words, 1<<32)
 	}
+	buf = buf[uint64bytes:] // move past header
 
 	*b = make(bitVector, words) // modify b in place
-	buf = buf[uint64bytes:]
 
 	// Read the bit vector entries
 	for i := range words {
 		if len(buf) < uint64bytes {
-			return errors.New("bitVector.UnmarshalBinary: not enough data to read bit vector entry")
+			return errors.New("bitVector.UnmarshalBinary: insufficient data for bit vector entry")
 		}
 		(*b)[i] = binary.LittleEndian.Uint64(buf[:uint64bytes])
 		buf = buf[uint64bytes:]
