@@ -13,7 +13,10 @@ const (
 	// Maximum number of attempts (level) at making a perfect hash function.
 	// Per the paper, each successive level exponentially reduces the
 	// probability of collision.
-	maxLevel = 200
+	maxLevel = 256
+
+	// Maximum number of partitions.
+	maxPartitions = 256
 )
 
 type options struct {
@@ -61,7 +64,7 @@ func InitialLevels(levels int) Options {
 // Setting partitions to less than 2 results in a single BBHash, wrapped in a BBHash2.
 func Partitions(partitions int) Options {
 	return func(o *options) {
-		o.partitions = max(partitions, 1)
+		o.partitions = max(min(partitions, maxPartitions), 1)
 	}
 }
 
