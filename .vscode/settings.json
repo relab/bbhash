@@ -20,8 +20,9 @@
         "custom": true, // Enable the `custom` dictionary
         "internal-terms": false // Disable the `internal-terms` dictionary
     },
-    "go.lintTool": "golangci-lint",
+    "go.lintTool": "staticcheck",
     "go.lintFlags": [
         "--fast",
-    ]
+    ],
+    "go.lintOnSave": "package"
 }

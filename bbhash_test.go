@@ -223,7 +223,7 @@ func TestReverseMapping(t *testing.T) {
 		keys := generateKeys(int(size), 99)
 		for _, gamma := range []float64{0.5, 1.5, 2.0} {
 			for _, partitions := range []int{1, 2, 3, 5, 20} {
-				t.Run(test.Name("Params", []string{"gamma", "partitions", "keys"}, gamma, partitions, size), func(t *testing.T) {
+				t.Run(test.Name("", []string{"gamma", "partitions", "keys"}, gamma, partitions, size), func(t *testing.T) {
 					bb, err := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
 					if err != nil {
 						t.Error(err)
@@ -278,8 +278,7 @@ func BenchmarkReverseMapping(b *testing.B) {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
 			for _, partitions := range partitionValues {
-				name := test.Name("New(WithReverseMap)", []string{"gamma", "partitions", "keys"}, gamma, partitions, size)
-				b.Run(name, func(b *testing.B) {
+				b.Run(test.Name("New(WithReverseMap)", []string{"gamma", "partitions", "keys"}, gamma, partitions, size), func(b *testing.B) {
 					for b.Loop() {
 						bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions), bbhash.WithReverseMap())
 					}
@@ -288,8 +287,7 @@ func BenchmarkReverseMapping(b *testing.B) {
 				if size > 1_000_000 {
 					continue // Skip the New(Sequential)+Find benchmark for large sizes; it's too slow.
 				}
-				name = test.Name("New(Sequential)+Find", []string{"gamma", "partitions", "keys"}, gamma, partitions, size)
-				b.Run(name, func(b *testing.B) {
+				b.Run(test.Name("New(Sequential)+Find", []string{"gamma", "partitions", "keys"}, gamma, partitions, size), func(b *testing.B) {
 					for b.Loop() {
 						bb, _ := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
 						getReverseMap(keys, bb)
@@ -324,8 +322,7 @@ func BenchmarkBBHashNew(b *testing.B) {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
 			for _, partitions := range partitionValues {
-				name := test.Name("Params", []string{"gamma", "partitions", "keys"}, gamma, partitions, size)
-				b.Run(name, func(b *testing.B) {
+				b.Run(test.Name("", []string{"gamma", "partitions", "keys"}, gamma, partitions, size), func(b *testing.B) {
 					bb, _ := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
 					bpk := bb.BitsPerKey()
 					b.ResetTimer()
@@ -345,8 +342,7 @@ func BenchmarkBBHashFind(b *testing.B) {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
 			for _, partitions := range partitionValues {
-				name := test.Name("Params", []string{"gamma", "partitions", "keys"}, gamma, partitions, size)
-				b.Run(name, func(b *testing.B) {
+				b.Run(test.Name("", []string{"gamma", "partitions", "keys"}, gamma, partitions, size), func(b *testing.B) {
 					bb, _ := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
 					bpk := bb.BitsPerKey()
 					b.ResetTimer()
@@ -384,8 +380,7 @@ func BenchmarkGammaLevels(b *testing.B) {
 	for _, size := range keySizes {
 		for _, gamma := range gammaValues {
 			for _, partitions := range partitionValues {
-				name := test.Name("Params", []string{"gamma", "partitions", "keys"}, gamma, partitions, size)
-				b.Run(name, func(b *testing.B) {
+				b.Run(test.Name("", []string{"gamma", "partitions", "keys"}, gamma, partitions, size), func(b *testing.B) {
 					keys := generateKeys(size, 99)
 					maxBB, _ := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
 					maxLvl, _ := maxBB.MaxMinLevels()

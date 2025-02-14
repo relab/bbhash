@@ -69,6 +69,18 @@ func (b bitVector) rank(i uint64) uint64 {
 	return uint64(r)
 }
 
+func (b bitVector) equal(o bitVector) bool {
+	if len(b) != len(o) {
+		return false
+	}
+	for i := range b {
+		if b[i] != o[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // String returns a string representation of the bit vector.
 func (b bitVector) String() string {
 	var buf strings.Builder
