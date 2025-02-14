@@ -21,8 +21,8 @@ func (b bitVector) size() uint64 {
 }
 
 // words returns the number of 64-bit words this bit vector has allocated.
-func (b bitVector) words() uint64 {
-	return uint64(len(b))
+func (b bitVector) words() uint32 {
+	return uint32(len(b))
 }
 
 // set sets the bit at position i.

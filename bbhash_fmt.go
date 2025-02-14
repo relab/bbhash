@@ -12,7 +12,7 @@ func (bb BBHash) String() string {
 	b.WriteString(fmt.Sprintf("BBHash(gamma=%3.1f, entries=%d, levels=%d, mem bits=%d, wire bits=%d, size=%s, bits per key=%3.1f, false positive rate=%.2f)\n",
 		bb.gamma(), bb.entries(), bb.Levels(), bb.numBits(), bb.wireBits(), bb.space(), bb.BitsPerKey(), bb.falsePositiveRate()))
 	for i, bv := range bb.bits {
-		sz := readableSize(bv.words() * 8)
+		sz := readableSize(uint64(bv.words()) * 8)
 		entries := bv.onesCount()
 		b.WriteString(fmt.Sprintf("  %d: %d / %d bits (%s)\n", i, entries, bv.size(), sz))
 	}

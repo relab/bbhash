@@ -6,17 +6,21 @@ import (
 	"fmt"
 )
 
-const uint64bytes = 8
+const (
+	uint32bytes = 4
+	uint64bytes = 8
+)
 
 // marshaledLength returns the number of bytes needed to marshal the bit vector.
 func (b bitVector) marshaledLength() int {
-	return uint64bytes * (1 + len(b))
+	// 4 bytes for the number of words in the bit vector
+	return uint32bytes + uint64bytes*len(b)
 }
 
 // AppendBinary implements the [encoding.BinaryAppender] interface.
 func (b bitVector) AppendBinary(buf []byte) ([]byte, error) {
 	// append the number of words needed for this bit vector to the buffer
-	buf = binary.LittleEndian.AppendUint64(buf, b.words())
+	buf = binary.LittleEndian.AppendUint32(buf, b.words())
 	// append the bit vector entries to the buffer
 	for _, v := range b {
 		buf = binary.LittleEndian.AppendUint64(buf, v)
@@ -33,16 +37,16 @@ func (b bitVector) MarshalBinary() ([]byte, error) {
 func (b *bitVector) UnmarshalBinary(data []byte) error {
 	// Make a copy of data, since we will be modifying buf's slice indices
 	buf := data
-	if len(buf) < uint64bytes {
+	if len(buf) < uint32bytes {
 		return errors.New("bitVector.UnmarshalBinary: no data")
 	}
 
 	// Read the number of words in the bit vector
-	words := binary.LittleEndian.Uint64(buf[:uint64bytes])
-	if words == 0 || words > (1<<32) {
+	words := binary.LittleEndian.Uint32(buf[:uint32bytes])
+	if words == 0 || words > (1<<32)-1 {
 		return fmt.Errorf("bitVector.UnmarshalBinary: invalid bit vector length %d (max %d)", words, 1<<32)
 	}
-	buf = buf[uint64bytes:] // move past header
+	buf = buf[uint32bytes:] // move past header
 
 	*b = make(bitVector, words) // modify b in place
 

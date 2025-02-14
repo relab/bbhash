@@ -79,6 +79,7 @@ func (bb BBHash2) wireBits() (sz uint64) {
 		return bb.partitions[0].wireBits()
 	}
 	const sizeOfInt = 64
+	sz += 1 // one byte for the header: number of partitions
 	for _, bx := range bb.partitions {
 		sz += bx.wireBits()
 		sz += sizeOfInt // to account for the offset
