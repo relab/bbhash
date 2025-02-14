@@ -65,19 +65,20 @@ func BenchmarkBBHashMarshalBinary(b *testing.B) {
 				bb2, _ := bbhash.New(keys, bbhash.Gamma(gamma))
 				bb := bb2.SinglePartition()
 				bpk := bb.BitsPerKey()
-				dataLen := 0
+
+				data, err := bb.MarshalBinary()
+				if err != nil {
+					b.Fatalf("Failed to marshal BBHash: %v", err)
+				}
+				marshaledSize := len(data)
+
 				b.ResetTimer()
 				for b.Loop() {
-					d, err := bb.MarshalBinary()
-					if err != nil {
-						b.Fatalf("Failed to marshal BBHash: %v", err)
-					}
-					dataLen += len(d)
+					bb.MarshalBinary()
 				}
 				// This metric is always the same for a given set of keys.
 				b.ReportMetric(bpk, "bits/key")
-				// This metric correspond to bits/key: dataLen*8/len(keys)
-				b.ReportMetric(float64(dataLen)/float64(b.N), "B/msg")
+				b.ReportMetric(float64(marshaledSize), "Bytes")
 			})
 		}
 	}
@@ -93,15 +94,33 @@ func BenchmarkBBHashUnmarshalBinary(b *testing.B) {
 				bb2, _ := bbhash.New(keys, bbhash.Gamma(gamma))
 				bb := bb2.SinglePartition()
 				bpk := bb.BitsPerKey()
-				d, err := bb.MarshalBinary()
+
+				data, err := bb.MarshalBinary()
 				if err != nil {
 					b.Fatalf("Failed to marshal BBHash: %v", err)
 				}
-				dataLen := len(d)
+				marshaledSize := len(data)
+
+				newBB := &bbhash.BBHash{}
+				if err = newBB.UnmarshalBinary(data); err != nil {
+					b.Fatalf("Failed to unmarshal BBHash: %v", err)
+				}
+				newBpk := newBB.BitsPerKey()
+				if newBpk != bpk {
+					b.Fatalf("newBB.BitsPerKey() = %f, want %f", newBpk, bpk)
+				}
+
 				b.ResetTimer()
 				for b.Loop() {
-					newBB := &bbhash.BBHash{}
-					if err = newBB.UnmarshalBinary(d); err != nil {
+					newBB.UnmarshalBinary(data)
+				}
+				// This metric is always the same for a given set of keys.
+				b.ReportMetric(bpk, "bits/key")
+				b.ReportMetric(float64(marshaledSize), "Bytes")
+			})
+		}
+	}
+}
 						b.Fatalf("Failed to unmarshal BBHash: %v", err)
 					}
 					newBpk := newBB.BitsPerKey()
