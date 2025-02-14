@@ -1,10 +1,10 @@
 package bbhash_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/relab/bbhash"
+	"github.com/relab/bbhash/internal/test"
 )
 
 func TestMarshalUnmarshalBBHash(t *testing.T) {
@@ -61,7 +61,7 @@ func BenchmarkBBHashMarshalBinary(b *testing.B) {
 	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
-			b.Run(fmt.Sprintf("gamma=%.1f/keys=%d", gamma, size), func(b *testing.B) {
+			b.Run(test.Name("", []string{"gamma", "keys"}, gamma, size), func(b *testing.B) {
 				bb2, _ := bbhash.New(keys, bbhash.Gamma(gamma))
 				bb := bb2.SinglePartition()
 				bpk := bb.BitsPerKey()
@@ -90,7 +90,7 @@ func BenchmarkBBHashUnmarshalBinary(b *testing.B) {
 	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
-			b.Run(fmt.Sprintf("gamma=%.1f/keys=%d", gamma, size), func(b *testing.B) {
+			b.Run(test.Name("", []string{"gamma", "keys"}, gamma, size), func(b *testing.B) {
 				bb2, _ := bbhash.New(keys, bbhash.Gamma(gamma))
 				bb := bb2.SinglePartition()
 				bpk := bb.BitsPerKey()
