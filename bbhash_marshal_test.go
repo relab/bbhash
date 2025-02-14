@@ -42,6 +42,19 @@ func TestMarshalUnmarshalBBHash(t *testing.T) {
 	}
 }
 
+func TestMarshalUnmarshalBBHashEmpty(t *testing.T) {
+	bb := &bbhash.BBHash{}
+	data, err := bb.MarshalBinary()
+	if err == nil {
+		t.Errorf("MarshalBinary() should have failed")
+	}
+	newBB := &bbhash.BBHash{}
+	if err = newBB.UnmarshalBinary(data); err == nil {
+		t.Errorf("UnmarshalBinary() should have failed")
+	}
+}
+
+
 // Run with:
 // go test -run x -bench BenchmarkBBHashMarshalBinary -benchmem
 func BenchmarkBBHashMarshalBinary(b *testing.B) {
