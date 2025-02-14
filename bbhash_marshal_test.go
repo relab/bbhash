@@ -250,7 +250,7 @@ func BenchmarkBBHash2UnmarshalBinary(b *testing.B) {
 // and number of bits per key for different key sizes, gamma values and number of partitions.
 //
 // Run with:
-// go test -run x -bench BenchmarkBBHashBitsPerKey
+// go test -run x -bench BenchmarkBBHash2BitsPerKey
 func BenchmarkBBHash2BitsPerKey(b *testing.B) {
 	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
