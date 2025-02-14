@@ -80,7 +80,7 @@ func (bb BBHash) numBits() (sz uint64) {
 
 // wireBits returns the number of on-the-wire bits used to represent the minimal perfect hash on the wire.
 func (bb BBHash) wireBits() (sz uint64) {
-	sz += 64 // for the header
+	sz += 8 // one byte for the header: number of bit vectors (levels)
 	for _, bv := range bb.bits {
 		sz += uint64(bv.marshaledLength()) * 8
 	}

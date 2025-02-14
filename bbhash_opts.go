@@ -13,7 +13,7 @@ const (
 	// Maximum number of attempts (level) at making a perfect hash function.
 	// Per the paper, each successive level exponentially reduces the
 	// probability of collision.
-	maxLevel = 256
+	maxLevel = 255
 
 	// Maximum number of partitions.
 	maxPartitions = 256

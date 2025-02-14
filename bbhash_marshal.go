@@ -8,7 +8,7 @@ import (
 
 // marshalLength returns the number of bytes needed to marshal the BBHash.
 func (bb BBHash) marshaledLength() int {
-	bbLen := uint64bytes // one word for header
+	bbLen := 1 // one byte for header: max 255 levels
 	for _, bv := range bb.bits {
 		bbLen += bv.marshaledLength()
 	}
@@ -17,12 +17,12 @@ func (bb BBHash) marshaledLength() int {
 
 // AppendBinary implements the [encoding.BinaryAppender] interface.
 func (bb BBHash) AppendBinary(buf []byte) (_ []byte, err error) {
-	numBitVectors := uint64(len(bb.bits))
+	numBitVectors := uint8(len(bb.bits))
 	if numBitVectors == 0 {
 		return nil, errors.New("BBHash.AppendBinary: no data")
 	}
 	// append header: the number of bit vectors (levels)
-	buf = binary.LittleEndian.AppendUint64(buf, numBitVectors)
+	buf = append(buf, numBitVectors)
 
 	// append the bit vector for each level
 	for _, bv := range bb.bits {
@@ -48,16 +48,16 @@ func (bb BBHash) MarshalBinary() ([]byte, error) {
 func (bb *BBHash) UnmarshalBinary(data []byte) error {
 	// Make a copy of data, since we will be modifying buf's slice indices
 	buf := data
-	if len(buf) < uint64bytes {
+	if len(buf) < 1 {
 		return errors.New("BBHash.UnmarshalBinary: no data")
 	}
 
 	// Read header: the number of bit vectors
-	numBitVectors := binary.LittleEndian.Uint64(buf[:uint64bytes])
+	numBitVectors := uint8(buf[0])
 	if numBitVectors == 0 || numBitVectors > maxLevel {
 		return fmt.Errorf("BBHash.UnmarshalBinary: invalid number of bit vectors %d (max %d)", numBitVectors, maxLevel)
 	}
-	buf = buf[uint64bytes:] // move past header
+	buf = buf[1:] // move past header
 
 	*bb = BBHash{} // modify bb in place
 	bb.bits = make([]bitVector, numBitVectors)
