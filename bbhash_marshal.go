@@ -87,8 +87,8 @@ func (b2 BBHash2) marshaledLength() int {
 	for _, bb := range b2.partitions {
 		b2Len += bb.marshaledLength()
 	}
-	// length of the offset vector
-	b2Len += uint64bytes * len(b2.offsets)
+	// length of the offset vector (excluding the first offset which is always 0)
+	b2Len += uint32bytes * (len(b2.offsets) - 1)
 	return b2Len
 }
 
@@ -108,8 +108,9 @@ func (b2 BBHash2) AppendBinary(buf []byte) (_ []byte, err error) {
 			return nil, err
 		}
 	}
-	for _, offset := range b2.offsets {
-		buf = binary.LittleEndian.AppendUint64(buf, uint64(offset))
+	// append the offset vector (excluding the first offset which is always 0)
+	for i := 1; i < len(b2.offsets); i++ {
+		buf = binary.LittleEndian.AppendUint32(buf, b2.offsets[i])
 	}
 
 	return buf, nil
@@ -152,15 +153,17 @@ func (b2 *BBHash2) UnmarshalBinary(data []byte) error {
 		buf = buf[bbLen:] // move past the current partition
 	}
 
-	if len(buf) < int(uint64bytes*numPartitions) {
+	// we skip the first offset since it is always 0, hence numPartitions-1
+	if len(buf) < int(uint32bytes*(numPartitions-1)) {
 		return errors.New("BBHash2.UnmarshalBinary: insufficient data for offset vector")
 	}
 
 	// Read offset vector
-	b2.offsets = make([]int, numPartitions)
-	for i := range numPartitions {
-		b2.offsets[i] = int(binary.LittleEndian.Uint64(buf[:uint64bytes]))
-		buf = buf[uint64bytes:] // move past the current offset
+	b2.offsets = make([]uint32, numPartitions)
+	b2.offsets[0] = 0 // first offset is always 0
+	for i := uint8(1); i < numPartitions; i++ {
+		b2.offsets[i] = binary.LittleEndian.Uint32(buf[:uint32bytes])
+		buf = buf[uint32bytes:] // move past the current offset
 	}
 
 	return nil

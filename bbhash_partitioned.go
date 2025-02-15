@@ -7,7 +7,7 @@ import (
 // BBHash2 represents a minimal perfect hash for a set of keys.
 type BBHash2 struct {
 	partitions []BBHash
-	offsets    []int
+	offsets    []uint32
 }
 
 // New creates a new BBHash2 for the given keys. The keys must be unique.
@@ -42,7 +42,7 @@ func New(keys []uint64, opts ...Options) (*BBHash2, error) {
 		}
 		return &BBHash2{
 			partitions: []BBHash{bb},
-			offsets:    []int{0},
+			offsets:    []uint32{0},
 		}, nil
 	}
 	return newPartitioned(keys, o)
@@ -61,11 +61,11 @@ func newPartitioned(keys []uint64, o *options) (*BBHash2, error) {
 	}
 	bb := &BBHash2{
 		partitions: make([]BBHash, o.partitions),
-		offsets:    make([]int, o.partitions),
+		offsets:    make([]uint32, o.partitions),
 	}
 	grp := &errgroup.Group{}
 	for offset, j := 0, 0; j < o.partitions; j++ {
-		bb.offsets[j] = offset
+		bb.offsets[j] = uint32(offset)
 		offset += len(partitionKeys[j])
 		grp.Go(func() error {
 			bb.partitions[j] = newBBHash(o.initialLevels)
