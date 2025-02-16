@@ -9,10 +9,10 @@ import (
 // String returns a string representation of BBHash with overall and per-level statistics.
 func (bb BBHash) String() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("BBHash(gamma=%3.1f, entries=%d, levels=%d, mem bits=%d, wire bits=%d, size=%s, bits per key=%3.1f, false positive rate=%.2f)\n",
-		bb.gamma(), bb.entries(), bb.Levels(), bb.numBits(), bb.wireBits(), bb.space(), bb.BitsPerKey(), bb.falsePositiveRate()))
+	b.WriteString(fmt.Sprintf("BBHash(gamma=%3.1f, entries=%d, levels=%d, bits per key=%3.1f, wire bits=%d, size=%s, false positive rate=%.2f)\n",
+		bb.gamma(), bb.entries(), bb.Levels(), bb.BitsPerKey(), bb.wireBits(), bb.space(), bb.falsePositiveRate()))
 	for i, bv := range bb.bits {
-		sz := readableSize(uint64(bv.words()) * 8)
+		sz := readableSize(int(bv.words()) * 8)
 		entries := bv.onesCount()
 		b.WriteString(fmt.Sprintf("  %d: %d / %d bits (%s)\n", i, entries, bv.size(), sz))
 	}
@@ -29,7 +29,7 @@ const (
 )
 
 // readableSize returns a human readable representation of the size in bytes.
-func readableSize(sizeInBytes uint64) string {
+func readableSize(sizeInBytes int) string {
 	sz := float64(sizeInBytes)
 	switch {
 	case sizeInBytes >= _PB:
@@ -69,22 +69,9 @@ func (bb BBHash) perLevelEntries() []uint64 {
 	return entries
 }
 
-// numBits returns the number of in-memory bits used to represent the minimal perfect hash.
-func (bb BBHash) numBits() (sz uint64) {
-	for _, bv := range bb.bits {
-		sz += bv.size()
-	}
-	sz += uint64(len(bb.ranks)) * 64
-	return sz
-}
-
-// wireBits returns the number of on-the-wire bits used to represent the minimal perfect hash on the wire.
-func (bb BBHash) wireBits() (sz uint64) {
-	sz += 8 // one byte for the header: number of bit vectors (levels)
-	for _, bv := range bb.bits {
-		sz += uint64(bv.marshaledLength()) * 8
-	}
-	return sz
+// wireBits returns the number of on-the-wire bits used to represent the minimal perfect hash.
+func (bb BBHash) wireBits() uint64 {
+	return uint64(bb.marshaledLength()) * 8
 }
 
 // BitsPerKey returns the number of bits per key in the minimal perfect hash.
@@ -94,7 +81,7 @@ func (bb BBHash) BitsPerKey() float64 {
 
 // space returns the space required by the minimal perfect hash in human readable format.
 func (bb BBHash) space() string {
-	return readableSize(bb.wireBits() / 8)
+	return readableSize(bb.marshaledLength())
 }
 
 // Levels returns the number of Levels in the minimal perfect hash.
@@ -109,7 +96,7 @@ func (bb BBHash) falsePositiveRate() float64 {
 	var cnt int
 	numTestKeys := bb.entries() * 2
 	for key := uint64(0); key < numTestKeys; key++ {
-		hashIndex := bb.Find(uint64(key))
+		hashIndex := bb.Find(key)
 		if hashIndex != 0 {
 			cnt++
 		}
