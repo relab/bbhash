@@ -19,6 +19,45 @@ func (bb BBHash) String() string {
 	return b.String()
 }
 
+// Levels returns the number of Levels in the minimal perfect hash.
+func (bb BBHash) Levels() int {
+	return len(bb.bits)
+}
+
+// BitsPerKey returns the number of bits per key in the minimal perfect hash.
+func (bb BBHash) BitsPerKey() float64 {
+	return float64(bb.wireBits()) / float64(bb.entries())
+}
+
+// LevelVectors returns a slice representation of the BBHash's per-level bit vectors.
+func (bb BBHash) LevelVectors() [][]uint64 {
+	m := make([][]uint64, 0, len(bb.bits))
+	for _, bv := range bb.bits {
+		m = append(m, bv)
+	}
+	return m
+}
+
+// BitVectors returns a Go slice for BBHash's per-level bit vectors.
+// This is intended for testing and debugging; no guarantees are made about the format.
+func (bb BBHash) BitVectors(varName string) string {
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("var %s = [][]uint64{\n", varName))
+	for lvl, bv := range bb.bits {
+		b.WriteString(fmt.Sprintf("// Level %d:\n{\n", lvl))
+		for _, v := range bv {
+			b.WriteString(fmt.Sprintf("%#016x,\n", v))
+		}
+		b.WriteString("},\n")
+	}
+	b.WriteString("}\n")
+	s, err := format.Source([]byte(b.String()))
+	if err != nil {
+		panic(err)
+	}
+	return string(s)
+}
+
 const (
 	_B = 1 << (iota * 10)
 	_kB
@@ -61,32 +100,14 @@ func (bb BBHash) entries() (sz uint64) {
 	return sz
 }
 
-func (bb BBHash) perLevelEntries() []uint64 {
-	entries := make([]uint64, len(bb.bits))
-	for lvl, bv := range bb.bits {
-		entries[lvl] += bv.onesCount()
-	}
-	return entries
-}
-
 // wireBits returns the number of on-the-wire bits used to represent the minimal perfect hash.
 func (bb BBHash) wireBits() uint64 {
 	return uint64(bb.marshaledLength()) * 8
 }
 
-// BitsPerKey returns the number of bits per key in the minimal perfect hash.
-func (bb BBHash) BitsPerKey() float64 {
-	return float64(bb.wireBits()) / float64(bb.entries())
-}
-
-// space returns the space required by the minimal perfect hash in human readable format.
+// space returns a human-readable string representing the size of the minimal perfect hash.
 func (bb BBHash) space() string {
 	return readableSize(bb.marshaledLength())
-}
-
-// Levels returns the number of Levels in the minimal perfect hash.
-func (bb BBHash) Levels() int {
-	return len(bb.bits)
 }
 
 // falsePositiveRate returns the false positive rate of the minimal perfect hash.
@@ -102,34 +123,4 @@ func (bb BBHash) falsePositiveRate() float64 {
 		}
 	}
 	return float64(cnt) / float64(numTestKeys)
-}
-
-// BitVectors returns a Go slice for BBHash's per-level bit vectors.
-// This is intended for testing and debugging; no guarantees are made about the format.
-func (bb BBHash) BitVectors(varName string) string {
-	var b strings.Builder
-	b.WriteString(fmt.Sprintf("var %s = [][]uint64{\n", varName))
-	for lvl, bv := range bb.bits {
-		b.WriteString(fmt.Sprintf("// Level %d:\n{\n", lvl))
-		for _, v := range bv {
-			b.WriteString(fmt.Sprintf("%#016x,\n", v))
-		}
-		b.WriteString("},\n")
-	}
-	b.WriteString("}\n")
-	s, err := format.Source([]byte(b.String()))
-	if err != nil {
-		panic(err)
-	}
-	return string(s)
-}
-
-// LevelVectors returns a slice representation of the BBHash's per-level bit vectors.
-func (bb BBHash) LevelVectors() [][]uint64 {
-	m := make([][]uint64, 0, len(bb.bits))
-	for _, bv := range bb.bits {
-		m = append(m, make([]uint64, len(bv)))
-		copy(m[len(m)-1], bv)
-	}
-	return m
 }

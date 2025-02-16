@@ -32,6 +32,7 @@ func (bb BBHash2) String() string {
 	return b.String()
 }
 
+// MaxMinLevels returns the maximum and minimum number of levels across all partitions.
 func (bb BBHash2) MaxMinLevels() (max, min int) {
 	max = 0
 	min = 999
@@ -46,25 +47,18 @@ func (bb BBHash2) MaxMinLevels() (max, min int) {
 	return max, min
 }
 
+// BitsPerKey returns the number of bits per key in the minimal perfect hash.
 func (bb BBHash2) BitsPerKey() float64 {
 	return float64(bb.wireBits()) / float64(bb.entries())
 }
 
-func (bb BBHash2) space() string {
-	return readableSize(bb.marshaledLength())
-}
-
-// entries returns the number of entries in the minimal perfect hash.
-func (bb BBHash2) entries() (sz uint64) {
+// LevelVectors returns a slice representation of BBHash2's per-partition, per-level bit vectors.
+func (bb BBHash2) LevelVectors() [][][]uint64 {
+	var vectors [][][]uint64
 	for _, bx := range bb.partitions {
-		sz += bx.entries()
+		vectors = append(vectors, bx.LevelVectors())
 	}
-	return sz
-}
-
-// wireBits returns the number of on-the-wire bits used to represent the minimal perfect hash.
-func (bb BBHash2) wireBits() uint64 {
-	return uint64(bb.marshaledLength()) * 8
+	return vectors
 }
 
 // BitVectors returns a Go slice for BBHash2's per-partition, per-level bit vectors.
@@ -91,11 +85,20 @@ func (bb BBHash2) BitVectors(varName string) string {
 	return string(s)
 }
 
-// LevelVectors returns a slice representation of BBHash2's per-partition, per-level bit vectors.
-func (bb BBHash2) LevelVectors() [][][]uint64 {
-	var vectors [][][]uint64
+// entries returns the number of entries in the minimal perfect hash.
+func (bb BBHash2) entries() (sz uint64) {
 	for _, bx := range bb.partitions {
-		vectors = append(vectors, bx.LevelVectors())
+		sz += bx.entries()
 	}
-	return vectors
+	return sz
+}
+
+// wireBits returns the number of on-the-wire bits used to represent the minimal perfect hash.
+func (bb BBHash2) wireBits() uint64 {
+	return uint64(bb.marshaledLength()) * 8
+}
+
+// space returns a human-readable string representing the size of the minimal perfect hash.
+func (bb BBHash2) space() string {
+	return readableSize(bb.marshaledLength())
 }
