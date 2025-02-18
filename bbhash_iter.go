@@ -29,6 +29,5 @@ func Keys(hashFunc func([]byte) uint64, chunks iter.Seq[[]byte]) []uint64 {
 	for c := range chunks {
 		keys = append(keys, hashFunc(c))
 	}
-
 	return keys
 }
