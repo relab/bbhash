@@ -1,9 +1,13 @@
 package bbhash_test
 
 import (
+	"bytes"
+	"context"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/binary"
 	"iter"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -11,6 +15,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/relab/bbhash"
 	"github.com/relab/bbhash/internal/fast"
+	"github.com/relab/bbhash/internal/test"
+	"github.com/relab/iago"
+	"github.com/relab/iago/iagotest"
 )
 
 // String taken from https://www.lipsum.com/
@@ -78,4 +85,73 @@ func TestHashKeysFromChunks(t *testing.T) {
 			}
 		})
 	}
+}
+
+func BenchmarkChunks(b *testing.B) {
+	for _, keySz := range keySizesOneV {
+		keys := generateKeys(keySz, 99)
+		bKeys := Uin64ToBytes(keys)
+		r := bytes.NewReader(bKeys)
+		for _, gamma := range gammaValuesOneV {
+			for _, sz := range bufSizes {
+				b.Run(test.Name("New(Chunks)", []string{"gamma", "buffer", "keys"}, gamma, sz, keySz), func(b *testing.B) {
+					b.Log("Running ReadChunks")
+					chunks := bbhash.ReadChunks(r, sz)
+					_ = chunks
+				})
+			}
+		}
+	}
+}
+
+func Uin64ToBytes(keys []uint64) []byte {
+	buf := make([]byte, 0)
+	for _, key := range keys {
+		buf = append(buf, byte(key))
+	}
+	return buf
+}
+
+func BenchmarkBBhash(b *testing.B) {
+	n := 1
+	//Create keys for the client group
+	//dir := b.TempDir()
+	wd, err := os.Getwd()
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	group := iagotest.CreateSSHGroup(b, n, false)
+
+	group.ErrorHandler = func(e error) {
+		b.Fatal(e)
+	}
+
+	group.Run("Upload a file", func(ctx context.Context, host iago.Host) error {
+		src, err := iago.NewPath(wd, ".")
+		if err != nil {
+			return err
+		}
+		dest, err := iago.NewPath(iago.Expand(host, "$HOME"), "bbhash")
+		if err != nil {
+			return err
+		}
+		return iago.Upload{
+			Src:  src,
+			Dest: dest,
+		}.Apply(ctx, host)
+	})
+
+	group.Run("Custom Shell Command", func(ctx context.Context, host iago.Host) error {
+		var sb strings.Builder
+		err = iago.Shell{
+			Command: "cd bbhash; /usr/local/go/bin/go env | grep GOMODCACHE",
+			Stdout:  &sb,
+		}.Apply(ctx, host)
+		b.Log(sb.String())
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 }
