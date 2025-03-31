@@ -2,10 +2,7 @@ package bbhash_test
 
 import (
 	"bytes"
-	"context"
-	"crypto/sha256"
 	_ "embed"
-	"encoding/binary"
 	"iter"
 	"os"
 	"slices"
@@ -14,10 +11,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/relab/bbhash"
-	"github.com/relab/bbhash/internal/fast"
 	"github.com/relab/bbhash/internal/test"
-	"github.com/relab/iago"
-	"github.com/relab/iago/iagotest"
+
 )
 
 // String taken from https://www.lipsum.com/
@@ -38,16 +33,6 @@ func TestChunks(t *testing.T) {
 	}
 }
 
-var sha256hashFunc = func(buf []byte) uint64 {
-	h := sha256.New()
-	h.Write(buf)
-	return binary.LittleEndian.Uint64(h.Sum(nil))
-}
-
-var fastHashFunc = func(buf []byte) uint64 {
-	return fast.Hash64(uint64(123), buf)
-}
-
 func CollectFunc[I, O any](seq iter.Seq[I], f func(I) O) (o []O) {
 	for v := range seq {
 		o = append(o, f(v))
@@ -62,12 +47,12 @@ func TestHashKeysFromChunks(t *testing.T) {
 		in        string
 		chunkSize int
 	}{
-		{name: "FashHash", hashFunc: fastHashFunc, in: input[:5], chunkSize: 4},
-		{name: "FashHash", hashFunc: fastHashFunc, in: input[:5], chunkSize: 8},
-		{name: "SHA256", hashFunc: sha256hashFunc, in: input[:5], chunkSize: 4},
-		{name: "SHA256", hashFunc: sha256hashFunc, in: input[:5], chunkSize: 8},
-		{name: "LongFast", hashFunc: fastHashFunc, in: input, chunkSize: 128},
-		{name: "LongSHA", hashFunc: sha256hashFunc, in: input, chunkSize: 128},
+		{name: "FashHash", hashFunc: bbhash.FastHashFunc, in: input[:5], chunkSize: 4},
+		{name: "FashHash", hashFunc: bbhash.FastHashFunc, in: input[:5], chunkSize: 8},
+		{name: "SHA256", hashFunc: bbhash.SHA256HashFunc, in: input[:5], chunkSize: 4},
+		{name: "SHA256", hashFunc: bbhash.SHA256HashFunc, in: input[:5], chunkSize: 8},
+		{name: "LongFast", hashFunc: bbhash.FastHashFunc, in: input, chunkSize: 128},
+		{name: "LongSHA", hashFunc: bbhash.SHA256HashFunc, in: input, chunkSize: 128},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -110,48 +95,4 @@ func Uin64ToBytes(keys []uint64) []byte {
 		buf = append(buf, byte(key))
 	}
 	return buf
-}
-
-func BenchmarkBBhash(b *testing.B) {
-	n := 1
-	//Create keys for the client group
-	//dir := b.TempDir()
-	wd, err := os.Getwd()
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	group := iagotest.CreateSSHGroup(b, n, false)
-
-	group.ErrorHandler = func(e error) {
-		b.Fatal(e)
-	}
-
-	group.Run("Upload a file", func(ctx context.Context, host iago.Host) error {
-		src, err := iago.NewPath(wd, ".")
-		if err != nil {
-			return err
-		}
-		dest, err := iago.NewPath(iago.Expand(host, "$HOME"), "bbhash")
-		if err != nil {
-			return err
-		}
-		return iago.Upload{
-			Src:  src,
-			Dest: dest,
-		}.Apply(ctx, host)
-	})
-
-	group.Run("Custom Shell Command", func(ctx context.Context, host iago.Host) error {
-		var sb strings.Builder
-		err = iago.Shell{
-			Command: "cd bbhash; /usr/local/go/bin/go env | grep GOMODCACHE",
-			Stdout:  &sb,
-		}.Apply(ctx, host)
-		b.Log(sb.String())
-		if err != nil {
-			return err
-		}
-		return nil
-	})
 }

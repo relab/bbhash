@@ -1,8 +1,12 @@
 package bbhash
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
 	"io"
 	"iter"
+
+	"github.com/relab/bbhash/internal/fast"
 )
 
 // Find the chunks from slow memory
@@ -30,4 +34,14 @@ func Keys(hashFunc func([]byte) uint64, chunks iter.Seq[[]byte]) []uint64 {
 		keys = append(keys, hashFunc(c))
 	}
 	return keys
+}
+
+var SHA256HashFunc = func(buf []byte) uint64 {
+	h := sha256.New()
+	h.Write(buf)
+	return binary.LittleEndian.Uint64(h.Sum(nil))
+}
+
+var FastHashFunc = func(buf []byte) uint64 {
+	return fast.Hash64(123, buf)
 }
