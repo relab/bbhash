@@ -1,13 +1,18 @@
 package bbhash_test
 
 import (
+	"bytes"
+	_ "embed"
 	"iter"
+	"os"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/relab/bbhash"
+	"github.com/relab/bbhash/internal/test"
+
 )
 
 // String taken from https://www.lipsum.com/
@@ -65,4 +70,29 @@ func TestHashKeysFromChunks(t *testing.T) {
 			}
 		})
 	}
+}
+
+func BenchmarkChunks(b *testing.B) {
+	for _, keySz := range keySizesOneV {
+		keys := generateKeys(keySz, 99)
+		bKeys := Uin64ToBytes(keys)
+		r := bytes.NewReader(bKeys)
+		for _, gamma := range gammaValuesOneV {
+			for _, sz := range bufSizes {
+				b.Run(test.Name("New(Chunks)", []string{"gamma", "buffer", "keys"}, gamma, sz, keySz), func(b *testing.B) {
+					b.Log("Running ReadChunks")
+					chunks := bbhash.ReadChunks(r, sz)
+					_ = chunks
+				})
+			}
+		}
+	}
+}
+
+func Uin64ToBytes(keys []uint64) []byte {
+	buf := make([]byte, 0)
+	for _, key := range keys {
+		buf = append(buf, byte(key))
+	}
+	return buf
 }

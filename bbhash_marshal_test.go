@@ -1,17 +1,16 @@
-package bbhash_test
+package bbhash
 
 import (
 	"testing"
 
-	"github.com/relab/bbhash"
 	"github.com/relab/bbhash/internal/test"
 )
 
-func TestMarshalUnmarshalBBHash(t *testing.T) {
+func TestMarshalUnmarshalSingleBBHash(t *testing.T) {
 	size := 100000
 	keys := generateKeys(size, 99)
 
-	bb2, err := bbhash.New(keys, bbhash.Gamma(2.0))
+	bb2, err := New(keys, Gamma(2.0))
 	if err != nil {
 		t.Fatalf("Failed to create BBHash: %v", err)
 	}
@@ -28,7 +27,7 @@ func TestMarshalUnmarshalBBHash(t *testing.T) {
 		t.Fatalf("Failed to marshal BBHash: %v", err)
 	}
 
-	newBB := &bbhash.BBHash{}
+	newBB := &SingleBBHash{}
 	if err = newBB.UnmarshalBinary(data); err != nil {
 		t.Fatalf("Failed to unmarshal BBHash: %v", err)
 	}
@@ -43,18 +42,18 @@ func TestMarshalUnmarshalBBHash(t *testing.T) {
 }
 
 func TestMarshalUnmarshalBBHashEmpty(t *testing.T) {
-	bb := &bbhash.BBHash{}
+	bb := &SingleBBHash{}
 	data, err := bb.MarshalBinary()
 	if err == nil {
 		t.Errorf("MarshalBinary() should have failed")
 	}
-	newBB := &bbhash.BBHash{}
+	newBB := &SingleBBHash{}
 	if err = newBB.UnmarshalBinary(data); err == nil {
 		t.Errorf("UnmarshalBinary() should have failed")
 	}
 }
 
-func TestMarshalUnmarshalBBHash2(t *testing.T) {
+func TestMarshalUnmarshalBBHash(t *testing.T) {
 	testCases := []struct {
 		size       int
 		partitions int
@@ -76,9 +75,9 @@ func TestMarshalUnmarshalBBHash2(t *testing.T) {
 		t.Run(test.Name("", []string{"keys", "partitions"}, tc.size, tc.partitions), func(t *testing.T) {
 			keys := generateKeys(tc.size, 98)
 
-			bb, err := bbhash.New(keys, bbhash.Partitions(tc.partitions))
+			bb, err := New(keys, Partitions(tc.partitions))
 			if err != nil {
-				t.Fatalf("Failed to create BBHash2: %v", err)
+				t.Fatalf("Failed to create BBHash: %v", err)
 			}
 
 			// Store original Find() results
@@ -87,19 +86,19 @@ func TestMarshalUnmarshalBBHash2(t *testing.T) {
 				originalHashIndexes[key] = bb.Find(key)
 			}
 
-			t.Logf("Original BBHash2: %v", bb)
+			t.Logf("Original BBHash: %v", bb)
 
 			data, err := bb.MarshalBinary()
 			if err != nil {
-				t.Fatalf("Failed to marshal BBHash2: %v", err)
+				t.Fatalf("Failed to marshal BBHash: %v", err)
 			}
 
-			newBB := &bbhash.BBHash2{}
+			newBB := &BBHash{}
 			if err = newBB.UnmarshalBinary(data); err != nil {
-				t.Fatalf("Failed to unmarshal BBHash2: %v", err)
+				t.Fatalf("Failed to unmarshal BBHash: %v", err)
 			}
 
-			// Validate that the unmarshalled BBHash2 produces the same Find() results
+			// Validate that the unmarshalled BBHash produces the same Find() results
 			for _, key := range keys {
 				hashIndex := newBB.Find(key)
 				if hashIndex != originalHashIndexes[key] {
@@ -112,12 +111,12 @@ func TestMarshalUnmarshalBBHash2(t *testing.T) {
 
 // Run with:
 // go test -run x -bench BenchmarkBBHashMarshalBinary -benchmem
-func BenchmarkBBHashMarshalBinary(b *testing.B) {
+func BenchmarkSingleBBHashMarshalBinary(b *testing.B) {
 	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
 			b.Run(test.Name("", []string{"gamma", "keys"}, gamma, size), func(b *testing.B) {
-				bb2, _ := bbhash.New(keys, bbhash.Gamma(gamma))
+				bb2, _ := New(keys, Gamma(gamma))
 				bb := bb2.SinglePartition()
 				bpk := bb.BitsPerKey()
 
@@ -141,12 +140,12 @@ func BenchmarkBBHashMarshalBinary(b *testing.B) {
 
 // Run with:
 // go test -run x -bench BenchmarkBBHashUnmarshalBinary -benchmem
-func BenchmarkBBHashUnmarshalBinary(b *testing.B) {
+func BenchmarkSingleBBHashUnmarshalBinary(b *testing.B) {
 	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
 			b.Run(test.Name("", []string{"gamma", "keys"}, gamma, size), func(b *testing.B) {
-				bb2, _ := bbhash.New(keys, bbhash.Gamma(gamma))
+				bb2, _ := New(keys, Gamma(gamma))
 				bb := bb2.SinglePartition()
 				bpk := bb.BitsPerKey()
 
@@ -156,7 +155,7 @@ func BenchmarkBBHashUnmarshalBinary(b *testing.B) {
 				}
 				marshaledSize := len(data)
 
-				newBB := &bbhash.BBHash{}
+				newBB := &BBHash{}
 				if err = newBB.UnmarshalBinary(data); err != nil {
 					b.Fatalf("Failed to unmarshal BBHash: %v", err)
 				}
@@ -178,14 +177,14 @@ func BenchmarkBBHashUnmarshalBinary(b *testing.B) {
 }
 
 // Run with:
-// go test -run x -bench BenchmarkBBHash2MarshalBinary -benchmem
-func BenchmarkBBHash2MarshalBinary(b *testing.B) {
+// go test -run x -bench BenchmarkBBHashMarshalBinary -benchmem
+func BenchmarkBBHashMarshalBinary(b *testing.B) {
 	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
 			for _, partitions := range partitionValues {
 				b.Run(test.Name("", []string{"gamma", "partitions", "keys"}, gamma, partitions, size), func(b *testing.B) {
-					bb, _ := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
+					bb, _ := New(keys, Gamma(gamma), Partitions(partitions))
 					bpk := bb.BitsPerKey()
 
 					data, err := bb.MarshalBinary()
@@ -208,14 +207,14 @@ func BenchmarkBBHash2MarshalBinary(b *testing.B) {
 }
 
 // Run with:
-// go test -run x -bench BenchmarkBBHash2UnmarshalBinary -benchmem
-func BenchmarkBBHash2UnmarshalBinary(b *testing.B) {
+// go test -run x -bench BenchmarkBBHashUnmarshalBinary -benchmem
+func BenchmarkBBHashUnmarshalBinary(b *testing.B) {
 	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
 			for _, partitions := range partitionValues {
 				b.Run(test.Name("", []string{"gamma", "partitions", "keys"}, gamma, partitions, size), func(b *testing.B) {
-					bb, _ := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
+					bb, _ := New(keys, Gamma(gamma), Partitions(partitions))
 					bpk := bb.BitsPerKey()
 
 					data, err := bb.MarshalBinary()
@@ -224,7 +223,7 @@ func BenchmarkBBHash2UnmarshalBinary(b *testing.B) {
 					}
 					marshaledSize := len(data)
 
-					newBB := &bbhash.BBHash2{}
+					newBB := &BBHash{}
 					if err = newBB.UnmarshalBinary(data); err != nil {
 						b.Fatalf("Failed to unmarshal BBHash: %v", err)
 					}
@@ -246,12 +245,12 @@ func BenchmarkBBHash2UnmarshalBinary(b *testing.B) {
 	}
 }
 
-// This is a fast deterministic benchmark that only measures the message length (BBHash2 length)
+// This is a fast deterministic benchmark that only measures the message length (BBHash length)
 // and number of bits per key for different key sizes, gamma values and number of partitions.
 //
 // Run with:
-// go test -run x -bench BenchmarkBBHash2BitsPerKey
-func BenchmarkBBHash2BitsPerKey(b *testing.B) {
+// go test -run x -bench BenchmarkBBHashBitsPerKey
+func BenchmarkBBHashBitsPerKey(b *testing.B) {
 	for _, size := range keySizes {
 		keys := generateKeys(size, 99)
 		for _, gamma := range gammaValues {
@@ -262,7 +261,7 @@ func BenchmarkBBHash2BitsPerKey(b *testing.B) {
 					// Stop the benchmark timer since we measure only the bits/key calculation
 					b.StopTimer()
 
-					bb, _ := bbhash.New(keys, bbhash.Gamma(gamma), bbhash.Partitions(partitions))
+					bb, _ := New(keys, Gamma(gamma), Partitions(partitions))
 					bpk := bb.BitsPerKey()
 					data, _ := bb.MarshalBinary()
 					marshaledSize := len(data)

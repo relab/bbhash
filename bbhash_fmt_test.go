@@ -28,9 +28,9 @@ func TestString(t *testing.T) {
 							// See issue #21
 							return
 						}
-						t.Logf("BBHash: %v", bb)
+						t.Logf("SingleBBHash: %v", bb)
 					}
-					t.Logf("BBHash2: %v", bb2)
+					t.Logf("BBHash: %v", bb2)
 				})
 			}
 		}

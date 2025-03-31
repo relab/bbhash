@@ -9,7 +9,7 @@ import (
 )
 
 // computeParallel computes the minimal perfect hash for the given keys in parallel by sharding the keys.
-func (bb *BBHash) computeParallel(keys []uint64, gamma float64) error {
+func (bb *SingleBBHash) computeParallel(keys []uint64, gamma float64) error {
 	sz := len(keys)
 	wds := words(sz, gamma)
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
