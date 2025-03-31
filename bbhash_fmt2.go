@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func (bb BBHash2) String() string {
+func (bb BBHash) String() string {
 	var b strings.Builder
 	lvlSz := make([]uint64, 0)
 	lvlEntries := make([]uint64, 0)
@@ -22,7 +22,7 @@ func (bb BBHash2) String() string {
 			}
 		}
 	}
-	b.WriteString(fmt.Sprintf("BBHash2(entries=%d, levels=%d, bits per key=%3.1f, wire bits=%d, size=%s)\n",
+	b.WriteString(fmt.Sprintf("BBHash(entries=%d, levels=%d, bits per key=%3.1f, wire bits=%d, size=%s)\n",
 		bb.entries(), len(lvlSz), bb.BitsPerKey(), bb.wireBits(), bb.space()))
 	for lvl := 0; lvl < len(lvlSz); lvl++ {
 		sz := int(lvlSz[lvl])
@@ -33,7 +33,7 @@ func (bb BBHash2) String() string {
 }
 
 // MaxMinLevels returns the maximum and minimum number of levels across all partitions.
-func (bb BBHash2) MaxMinLevels() (max, min int) {
+func (bb BBHash) MaxMinLevels() (max, min int) {
 	max = 0
 	min = 999
 	for _, bx := range bb.partitions {
@@ -48,12 +48,12 @@ func (bb BBHash2) MaxMinLevels() (max, min int) {
 }
 
 // BitsPerKey returns the number of bits per key in the minimal perfect hash.
-func (bb BBHash2) BitsPerKey() float64 {
+func (bb BBHash) BitsPerKey() float64 {
 	return float64(bb.wireBits()) / float64(bb.entries())
 }
 
-// LevelVectors returns a slice representation of BBHash2's per-partition, per-level bit vectors.
-func (bb BBHash2) LevelVectors() [][][]uint64 {
+// LevelVectors returns a slice representation of BBHash's per-partition, per-level bit vectors.
+func (bb BBHash) LevelVectors() [][][]uint64 {
 	var vectors [][][]uint64
 	for _, bx := range bb.partitions {
 		vectors = append(vectors, bx.LevelVectors())
@@ -61,9 +61,9 @@ func (bb BBHash2) LevelVectors() [][][]uint64 {
 	return vectors
 }
 
-// BitVectors returns a Go slice for BBHash2's per-partition, per-level bit vectors.
+// BitVectors returns a Go slice for BBHash's per-partition, per-level bit vectors.
 // This is intended for testing and debugging; no guarantees are made about the format.
-func (bb BBHash2) BitVectors(varName string) string {
+func (bb BBHash) BitVectors(varName string) string {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("var %s = [][][]uint64{\n", varName))
 	for partition, bx := range bb.partitions {
@@ -86,7 +86,7 @@ func (bb BBHash2) BitVectors(varName string) string {
 }
 
 // entries returns the number of entries in the minimal perfect hash.
-func (bb BBHash2) entries() (sz uint64) {
+func (bb BBHash) entries() (sz uint64) {
 	for _, bx := range bb.partitions {
 		sz += bx.entries()
 	}
@@ -94,11 +94,11 @@ func (bb BBHash2) entries() (sz uint64) {
 }
 
 // wireBits returns the number of on-the-wire bits used to represent the minimal perfect hash.
-func (bb BBHash2) wireBits() uint64 {
+func (bb BBHash) wireBits() uint64 {
 	return uint64(bb.marshaledLength()) * 8
 }
 
 // space returns a human-readable string representing the size of the minimal perfect hash.
-func (bb BBHash2) space() string {
+func (bb BBHash) space() string {
 	return readableSize(bb.marshaledLength())
 }

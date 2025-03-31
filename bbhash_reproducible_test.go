@@ -119,7 +119,7 @@ func (bvg *bvGenerator) createBitVectorMap(size, partitions int) string {
 }
 
 // createBitVectors creates a Go string representation of the bit vectors for the given BBHash.
-func (bvg *bvGenerator) createBitVectors(bitVectorVarName string, bb *bbhash.BBHash2) {
+func (bvg *bvGenerator) createBitVectors(bitVectorVarName string, bb *bbhash.BBHash) {
 	if bvg.usedVarNames[bitVectorVarName] {
 		return // Bit vectors already added for this size and partitions
 	}

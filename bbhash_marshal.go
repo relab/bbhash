@@ -7,7 +7,7 @@ import (
 )
 
 // marshalLength returns the number of bytes needed to marshal the BBHash.
-func (bb BBHash) marshaledLength() int {
+func (bb SingleBBHash) marshaledLength() int {
 	bbLen := 1 // one byte for header: max 255 levels
 	for _, bv := range bb.bits {
 		bbLen += bv.marshaledLength()
@@ -16,7 +16,7 @@ func (bb BBHash) marshaledLength() int {
 }
 
 // AppendBinary implements the [encoding.BinaryAppender] interface.
-func (bb BBHash) AppendBinary(buf []byte) (_ []byte, err error) {
+func (bb SingleBBHash) AppendBinary(buf []byte) (_ []byte, err error) {
 	numBitVectors := uint8(len(bb.bits))
 	if numBitVectors == 0 {
 		return nil, errors.New("BBHash.AppendBinary: no data")
@@ -40,12 +40,12 @@ func (bb BBHash) AppendBinary(buf []byte) (_ []byte, err error) {
 }
 
 // MarshalBinary implements the [encoding.BinaryMarshaler] interface.
-func (bb BBHash) MarshalBinary() ([]byte, error) {
+func (bb SingleBBHash) MarshalBinary() ([]byte, error) {
 	return bb.AppendBinary(make([]byte, 0, bb.marshaledLength()))
 }
 
 // UnmarshalBinary implements the [encoding.BinaryUnmarshaler] interface.
-func (bb *BBHash) UnmarshalBinary(data []byte) error {
+func (bb *SingleBBHash) UnmarshalBinary(data []byte) error {
 	// Make a copy of data, since we will be modifying buf's slice indices
 	buf := data
 	if len(buf) < 1 {
@@ -59,7 +59,7 @@ func (bb *BBHash) UnmarshalBinary(data []byte) error {
 	}
 	buf = buf[1:] // move past header
 
-	*bb = BBHash{} // modify bb in place
+	*bb = SingleBBHash{} // modify bb in place
 	bb.bits = make([]bitVector, numBitVectors)
 
 	// Read bit vectors for each level
@@ -80,8 +80,8 @@ func (bb *BBHash) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// marshalLength returns the number of bytes needed to marshal the BBHash2.
-func (b2 BBHash2) marshaledLength() int {
+// marshalLength returns the number of bytes needed to marshal the BBHash.
+func (b2 BBHash) marshaledLength() int {
 	b2Len := 1 // one byte for header: max 255 partitions
 	// length of each partition
 	for _, bb := range b2.partitions {
@@ -93,10 +93,10 @@ func (b2 BBHash2) marshaledLength() int {
 }
 
 // AppendBinary implements the [encoding.BinaryAppender] interface.
-func (b2 BBHash2) AppendBinary(buf []byte) (_ []byte, err error) {
+func (b2 BBHash) AppendBinary(buf []byte) (_ []byte, err error) {
 	numPartitions := uint8(len(b2.partitions))
 	if numPartitions == 0 {
-		return nil, errors.New("BBHash2.AppendBinary: no data")
+		return nil, errors.New("BBHash.AppendBinary: no data")
 	}
 	// append header: the number of partitions
 	buf = append(buf, numPartitions)
@@ -117,45 +117,45 @@ func (b2 BBHash2) AppendBinary(buf []byte) (_ []byte, err error) {
 }
 
 // MarshalBinary implements the [encoding.BinaryMarshaler] interface.
-func (b2 BBHash2) MarshalBinary() ([]byte, error) {
+func (b2 BBHash) MarshalBinary() ([]byte, error) {
 	return b2.AppendBinary(make([]byte, 0, b2.marshaledLength()))
 }
 
 // UnmarshalBinary implements the [encoding.BinaryUnmarshaler] interface.
-func (b2 *BBHash2) UnmarshalBinary(data []byte) error {
+func (b2 *BBHash) UnmarshalBinary(data []byte) error {
 	// Make a copy of data, since we will be modifying buf's slice indices
 	buf := data
 	if len(buf) < 1 {
-		return errors.New("BBHash2.UnmarshalBinary: no data")
+		return errors.New("BBHash.UnmarshalBinary: no data")
 	}
 
 	// Read header: the number of partitions
 	numPartitions := uint8(buf[0])
 	if numPartitions == 0 || numPartitions > maxPartitions {
-		return fmt.Errorf("BBHash2.UnmarshalBinary: invalid number of partitions %d (max %d)", numPartitions, maxPartitions)
+		return fmt.Errorf("BBHash.UnmarshalBinary: invalid number of partitions %d (max %d)", numPartitions, maxPartitions)
 	}
 	buf = buf[1:] // move past header
 
-	*b2 = BBHash2{} // modify b2 in place
-	b2.partitions = make([]BBHash, numPartitions)
+	*b2 = BBHash{} // modify b2 in place
+	b2.partitions = make([]SingleBBHash, numPartitions)
 
 	// Read BBHash for each partition
 	for i := range numPartitions {
-		bb := BBHash{}
+		bb := SingleBBHash{}
 		if err := bb.UnmarshalBinary(buf); err != nil {
 			return err
 		}
 		b2.partitions[i] = bb
 		bbLen := bb.marshaledLength()
 		if len(buf) < bbLen {
-			return errors.New("BBHash2.UnmarshalBinary: insufficient data for remaining partitions")
+			return errors.New("BBHash.UnmarshalBinary: insufficient data for remaining partitions")
 		}
 		buf = buf[bbLen:] // move past the current partition
 	}
 
 	// we skip the first offset since it is always 0, hence numPartitions-1
 	if len(buf) < int(uint32bytes*(numPartitions-1)) {
-		return errors.New("BBHash2.UnmarshalBinary: insufficient data for offset vector")
+		return errors.New("BBHash.UnmarshalBinary: insufficient data for offset vector")
 	}
 
 	// Read offset vector

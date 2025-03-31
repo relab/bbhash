@@ -104,7 +104,7 @@ func writeCSVFile(filename string, create, find map[int][]time.Duration, levels 
 
 func runSequential(numKeys int, gamma float64, count int) ([]time.Duration, []time.Duration, int, float64) {
 	keys := generateKeys(numKeys, 99)
-	var bb *bbhash.BBHash2
+	var bb *bbhash.BBHash
 	var err error
 	elapsed := make([]time.Duration, count)
 	for i := 0; i < count; i++ {
@@ -123,7 +123,7 @@ func runSequential(numKeys int, gamma float64, count int) ([]time.Duration, []ti
 
 func runParallel(numKeys int, gamma float64, count int) ([]time.Duration, []time.Duration, int, float64) {
 	keys := generateKeys(numKeys, 99)
-	var bb *bbhash.BBHash2
+	var bb *bbhash.BBHash
 	var err error
 	elapsed := make([]time.Duration, count)
 	for i := 0; i < count; i++ {
@@ -142,7 +142,7 @@ func runParallel(numKeys int, gamma float64, count int) ([]time.Duration, []time
 
 func runPartitioned(numKeys, numPartitions int, gamma float64, count int) ([]time.Duration, []time.Duration, int, float64) {
 	keys := generateKeys(numKeys, 99)
-	var bb *bbhash.BBHash2
+	var bb *bbhash.BBHash
 	var err error
 	elapsed := make([]time.Duration, count)
 	for i := 0; i < count; i++ {

@@ -4,18 +4,18 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// BBHash2 represents a minimal perfect hash for a set of keys.
-type BBHash2 struct {
-	partitions []BBHash
+// BBHash represents a minimal perfect hash for a set of keys.
+type BBHash struct {
+	partitions []SingleBBHash
 	offsets    []uint32
 }
 
-// New creates a new BBHash2 for the given keys. The keys must be unique.
+// New creates a new BBHash for the given keys. The keys must be unique.
 // Creation is configured using the provided options. The default options
 // are used if none are provided. Available options include: Gamma,
 // InitialLevels, Partitions, Parallel, and WithReverseMap.
 // With fewer than 1000 keys, the sequential version is always used.
-func New(keys []uint64, opts ...Options) (*BBHash2, error) {
+func New(keys []uint64, opts ...Options) (*BBHash, error) {
 	if len(keys) < 1 {
 		panic("bbhash: no keys provided")
 	}
@@ -40,8 +40,8 @@ func New(keys []uint64, opts ...Options) (*BBHash2, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &BBHash2{
-			partitions: []BBHash{bb},
+		return &BBHash{
+			partitions: []SingleBBHash{bb},
 			offsets:    []uint32{0},
 		}, nil
 	}
@@ -49,7 +49,7 @@ func New(keys []uint64, opts ...Options) (*BBHash2, error) {
 }
 
 // newPartitioned partitions the keys and creates multiple BBHashes in parallel.
-func newPartitioned(keys []uint64, o *options) (*BBHash2, error) {
+func newPartitioned(keys []uint64, o *options) (*BBHash, error) {
 	// Partition the keys into partitions by placing keys with the
 	// same remainder (modulo partitions) into the same partition.
 	// This approach copies the keys into partitions slices, which
@@ -59,8 +59,8 @@ func newPartitioned(keys []uint64, o *options) (*BBHash2, error) {
 		i := k % uint64(o.partitions)
 		partitionKeys[i] = append(partitionKeys[i], k)
 	}
-	bb := &BBHash2{
-		partitions: make([]BBHash, o.partitions),
+	bb := &BBHash{
+		partitions: make([]SingleBBHash, o.partitions),
 		offsets:    make([]uint32, o.partitions),
 	}
 	grp := &errgroup.Group{}
@@ -92,14 +92,14 @@ func newPartitioned(keys []uint64, o *options) (*BBHash2, error) {
 // If the key is not in the original key set, two things can happen:
 // 1. The return value is 0, representing that the key was not in the original key set.
 // 2. The return value is in the expected range [1, len(keys)], but is a false positive.
-func (bb BBHash2) Find(key uint64) uint64 {
+func (bb BBHash) Find(key uint64) uint64 {
 	i := key % uint64(len(bb.partitions))
 	return bb.partitions[i].Find(key) + uint64(bb.offsets[i])
 }
 
 // Key returns the key for the given index.
 // The index must be in the range [1, len(keys)], otherwise 0 is returned.
-func (bb BBHash2) Key(index uint64) uint64 {
+func (bb BBHash) Key(index uint64) uint64 {
 	for _, b := range bb.partitions {
 		if index < uint64(len(b.reverseMap)) {
 			return b.reverseMap[index]
@@ -109,15 +109,15 @@ func (bb BBHash2) Key(index uint64) uint64 {
 	return 0
 }
 
-// Partitions returns the number of partitions in the BBHash2.
+// Partitions returns the number of partitions in the BBHash.
 // This is mainly useful for testing and may be removed in the future.
-func (bb BBHash2) Partitions() int {
+func (bb BBHash) Partitions() int {
 	return len(bb.partitions)
 }
 
 // SinglePartition returns the underlying BBHash if it contains a single partition.
 // If there are multiple partitions, it returns nil.
-func (bb BBHash2) SinglePartition() *BBHash {
+func (bb BBHash) SinglePartition() *SingleBBHash {
 	if len(bb.partitions) == 1 {
 		return &bb.partitions[0]
 	}
@@ -126,6 +126,6 @@ func (bb BBHash2) SinglePartition() *BBHash {
 
 // enforce interface compliance
 var (
-	_ bbhash     = (*BBHash2)(nil)
-	_ reverseMap = (*BBHash2)(nil)
+	_ bbhash     = (*BBHash)(nil)
+	_ reverseMap = (*BBHash)(nil)
 )

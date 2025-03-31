@@ -59,9 +59,9 @@ func InitialLevels(levels int) Options {
 	}
 }
 
-// Partitions sets the number of partitions to use when creating a BBHash2.
+// Partitions sets the number of partitions to use when creating a BBHash.
 // The keys are partitioned into the given the number partitions.
-// Setting partitions to less than 2 results in a single BBHash, wrapped in a BBHash2.
+// Setting partitions to less than 2 results in a single BBHash, wrapped in a BBHash.
 func Partitions(partitions int) Options {
 	return func(o *options) {
 		o.partitions = max(min(partitions, maxPartitions), 1)

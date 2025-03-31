@@ -8,14 +8,14 @@ import (
 )
 
 // BBHash represents a minimal perfect hash for a set of keys.
-type BBHash struct {
+type SingleBBHash struct {
 	bits       []bitVector // bit vectors for each level
 	ranks      []uint64    // total rank for each level
 	reverseMap []uint64    // index -> key (only filled if needed)
 }
 
-func newBBHash(initialLevels int) BBHash {
-	return BBHash{
+func newBBHash(initialLevels int) SingleBBHash {
+	return SingleBBHash{
 		bits: make([]bitVector, 0, initialLevels),
 	}
 }
@@ -31,7 +31,7 @@ func newBBHash(initialLevels int) BBHash {
 // If the key is not in the original key set, two things can happen:
 // 1. The return value is 0, representing that the key was not in the original key set.
 // 2. The return value is in the expected range [1, len(keys)], but is a false positive.
-func (bb BBHash) Find(key uint64) uint64 {
+func (bb SingleBBHash) Find(key uint64) uint64 {
 	for lvl, bv := range bb.bits {
 		i := fast.Hash(uint64(lvl), key) % bv.size()
 		if bv.isSet(i) {
@@ -43,7 +43,7 @@ func (bb BBHash) Find(key uint64) uint64 {
 
 // Key returns the key for the given index.
 // The index must be in the range [1, len(keys)], otherwise 0 is returned.
-func (bb BBHash) Key(index uint64) uint64 {
+func (bb SingleBBHash) Key(index uint64) uint64 {
 	if bb.reverseMap == nil || index == 0 || int(index) >= len(bb.reverseMap) {
 		return 0
 	}
@@ -51,7 +51,7 @@ func (bb BBHash) Key(index uint64) uint64 {
 }
 
 // compute computes the minimal perfect hash for the given keys.
-func (bb *BBHash) compute(keys []uint64, gamma float64) error {
+func (bb *SingleBBHash) compute(keys []uint64, gamma float64) error {
 	sz := len(keys)
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
 	// bit vectors for current level : A and C in the paper
@@ -100,7 +100,7 @@ func (bb *BBHash) compute(keys []uint64, gamma float64) error {
 }
 
 // computeWithKeymap is similar to compute(), but in addition returns the reverse keymap.
-func (bb *BBHash) computeWithKeymap(keys []uint64, gamma float64) error {
+func (bb *SingleBBHash) computeWithKeymap(keys []uint64, gamma float64) error {
 	sz := len(keys)
 	redo := make([]uint64, 0, sz/2) // heuristic: only 1/2 of the keys will collide
 	// bit vectors for current level : A and C in the paper
@@ -169,7 +169,7 @@ func (bb *BBHash) computeWithKeymap(keys []uint64, gamma float64) error {
 
 // computeLevelRanks computes the total rank of each level.
 // The total rank is the rank for all levels up to and including the current level.
-func (bb *BBHash) computeLevelRanks() {
+func (bb *SingleBBHash) computeLevelRanks() {
 	// Initializing the rank to 1, since the 0 index is reserved for not-found.
 	var rank uint64 = 1
 	bb.ranks = make([]uint64, len(bb.bits))
@@ -181,6 +181,6 @@ func (bb *BBHash) computeLevelRanks() {
 
 // enforce interface compliance
 var (
-	_ bbhash     = (*BBHash)(nil)
-	_ reverseMap = (*BBHash)(nil)
+	_ bbhash     = (*SingleBBHash)(nil)
+	_ reverseMap = (*SingleBBHash)(nil)
 )
